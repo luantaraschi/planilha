@@ -1,7 +1,6 @@
+import { TodayDashboard } from "@/features/today/today-dashboard";
+import { TODAY_DEMO } from "@/features/today/today-model";
+
 export default function HomePage() {
-  return (
-    <main>
-      <h1>Meu dia</h1>
-    </main>
-  );
+  return <TodayDashboard snapshot={TODAY_DEMO} />;
 }
