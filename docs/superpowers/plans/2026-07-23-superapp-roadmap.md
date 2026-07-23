@@ -49,4 +49,4 @@ starts.
 
 ## Current detailed plan
 
-`docs/superpowers/plans/2026-07-23-foundation-today-shell.md`
+`docs/superpowers/plans/2026-07-23-identity-data-core.md`
