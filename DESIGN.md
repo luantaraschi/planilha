@@ -1,4 +1,4 @@
-<!-- SEED: established with the user before implementation; re-run /impeccable document once there's code to capture the actual tokens and components. -->
+<!-- IMPLEMENTED: synchronized with the Foundation + Today shell on 2026-07-23. -->
 ---
 name: Superapp de organização pessoal
 description: Um planner ilustrado que conecta rotina, bem-estar e finanças.
@@ -52,17 +52,16 @@ não aparecer como quadradinhos aleatórios atrás de cada ícone.
 
 ## Typography
 
-A tipografia deve ser uma grotesca arredondada de alta legibilidade, com
-personalidade suficiente para não parecer o default de um dashboard. A família
-final será avaliada visualmente durante a primeira implementação; a comparação
-deve incluir leitura em números, datas, português e tamanhos pequenos.
+A família implementada é **Nunito Sans Variable**, carregada por `next/font`
+com subset latino. Ela assume display, corpo, rótulos e dados; contraste entre
+papéis vem de peso, escala e espaçamento, sem adicionar uma segunda família.
 
 Títulos são compactos, humanos e diretos. Corpo e dados financeiros usam
 alinhamento e numerais adequados. Rótulos em caixa alta são raros e nunca
 substituem hierarquia tipográfica.
 
-**The One-Family Rule.** Começar com uma família variável bem escolhida; uma
-segunda família só entra se resolver uma necessidade comprovada.
+**The One-Family Rule.** Uma segunda família só entra se resolver uma
+necessidade comprovada.
 
 ## Layout
 
@@ -75,6 +74,11 @@ No celular, a navegação vira barra inferior e o conteúdo secundário abre em
 páginas ou painéis próprios. A prioridade visual segue tarefa, urgência e
 momento do dia. Densidade pode variar entre módulos, mas a cadência de espaço e
 a posição das ações permanecem previsíveis.
+
+Na implementação atual, a navegação lateral muda para uma barra inferior a
+partir de `900px`: cinco destinos ficam expostos e `Mais` agrupa Metas, Notas e
+Assistente. Abaixo de `700px`, a ilustração vira um recorte horizontal compacto;
+captura rápida, linha do tempo e resumos seguem em uma coluna.
 
 ## Elevation & Depth
 
@@ -93,15 +97,45 @@ recortes inspirados em papelaria podem criar uma assinatura, mas nunca esconder
 estado ou área clicável.
 
 Iconografia usa a família
-[Streamline Plump](https://blog.streamlinehq.com/plump/) como referência e base
-preferencial. Ícones pequenos usam Plump Line; destaques e módulos usam Plump
-Duo. A cobertura e a licença comercial devem ser confirmadas antes da
-publicação.
+[Streamline Plump](https://blog.streamlinehq.com/plump/) como referência de
+volume e simpatia. A fundação implementa oito pictogramas SVG originais
+(`today`, `calendar`, `tasks`, `finance`, `wellbeing`, `goals`, `notes` e
+`assistant`) com `viewBox 32`, traço arredondado de `1.8` e preenchimento tonal.
+Um pack externo só entra após confirmação de cobertura e licença comercial.
 
 Ilustrações são autorais: objetos cotidianos, folhas, flores, cadernos, relógios,
 carteiras e pequenas cenas da rotina, desenhados com contorno orgânico, formas
 chapadas e textura discreta. O conjunto compartilha perspectiva, paleta,
 espessura de traço e iluminação.
+
+## Implemented Components
+
+- **Today shell:** sidebar persistente no desktop e barra inferior com cinco
+  destinos + `Mais` no mobile, com link de salto para o conteúdo principal.
+- **Morning header:** saudação, data localizada, ação `Adicionar` e ilustração
+  editorial própria em WebP (`1200 × 800`, 94 KB).
+- **Quick capture:** campo universal em superfície branca; a ação do cabeçalho
+  move o foco quando vazio e confirma localmente a captura quando preenchido.
+  Um aviso persistente explica que alterações ficam apenas na prévia.
+- **Day trail:** linha do tempo branca com aba pêssego, haste fina e marcadores
+  semânticos para compromisso, tarefa e conta.
+- **Daily summaries:** check-in de humor com cinco glifos próprios e campo
+  financeiro em sálvia com motivo botânico.
+- **Paper sections:** lista de prioridades e canteiro de hábitos, cada um com
+  estrutura e raio próprios.
+- **Route states:** carregamento anunciado, erro recuperável e página não
+  encontrada compartilham uma pequena cena floral.
+
+## Settled Tokens and Behavior
+
+- Raios: `0.75rem`, `1.125rem` e `1.5rem`, com assimetria pontual na papelaria.
+- Sombra ambiental: `0 18px 50px rgb(101 73 61 / 9%)`; elevação de ação usa
+  deslocamento vertical e nunca halo decorativo.
+- Foco: contorno de `3px` em `#71334A`, deslocado `3px`.
+- Movimento: `180ms`, curva `cubic-bezier(0.16, 1, 0.3, 1)`; todo movimento
+  não essencial é removido com `prefers-reduced-motion`.
+- Dados: moeda em BRL, datas em `pt-BR` e fuso `America/Bahia`.
+- Contraste: pares de texto medidos entre `5.24:1` e `7.31:1`.
 
 ## Do's and Don'ts
 

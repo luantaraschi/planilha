@@ -4,6 +4,24 @@
   grid-template-columns: 15.75rem minmax(0, 1fr);
 }
 
+.skipLink {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 50;
+  padding: 0.65rem 0.85rem;
+  color: white;
+  background: var(--focus);
+  border-radius: 0.65rem;
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(-180%);
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -64,6 +82,10 @@
   box-shadow: 0 8px 24px rgb(101 73 61 / 7%);
 }
 
+.moreNav {
+  display: none;
+}
+
 .sidebarNote {
   display: flex;
   gap: 0.65rem;
@@ -82,6 +104,7 @@
 }
 
 .main {
+  min-width: 0;
   width: min(100%, 91rem);
   padding: clamp(1.4rem, 3vw, 3.2rem);
 }
@@ -97,6 +120,7 @@
 .headerCopy {
   position: relative;
   z-index: 1;
+  min-width: 0;
   max-width: 44rem;
 }
 
@@ -118,6 +142,7 @@
   line-height: 0.98;
   letter-spacing: -0.04em;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .subtitle {
@@ -190,6 +215,13 @@
   border-radius: 0.48rem;
   font-size: 0.7rem;
   font-weight: 750;
+}
+
+.previewNotice {
+  margin: -0.75rem 0 1.35rem;
+  color: var(--clay);
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
 
 .contentGrid {
@@ -456,6 +488,7 @@
   font-variant-numeric: tabular-nums;
   line-height: 1;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
 .finance > p:not(.kicker) {
@@ -478,9 +511,16 @@
   bottom: -1.4rem;
   width: 7rem;
   height: 8.5rem;
-  border-left: 2px solid rgb(48 79 53 / 20%);
-  border-radius: 50%;
   transform: rotate(24deg);
+}
+
+.financeSprig::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.12rem;
+  background: rgb(48 79 53 / 20%);
+  border-radius: 50%;
+  content: "";
 }
 
 .financeSprig i {
@@ -572,6 +612,7 @@
 
 .checkList label {
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .habitGarden {
@@ -634,6 +675,17 @@
   }
 }
 
+@media (forced-colors: active) {
+  .navActive,
+  .moodOptions input:checked + .moodGlyph {
+    border: 2px solid CanvasText;
+  }
+
+  .timelineStem > span {
+    border-color: CanvasText;
+  }
+}
+
 @media (max-width: 68rem) {
   .morningIllustration {
     width: min(27vw, 20rem);
@@ -673,16 +725,12 @@
   }
 
   .nav {
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(4.4rem, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.2rem;
     margin: 0;
-    overflow-x: auto;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
   }
 
-  .nav::-webkit-scrollbar {
+  .navItem[data-mobile-secondary="true"] {
     display: none;
   }
 
@@ -695,6 +743,63 @@
     padding: 0.28rem 0.4rem;
     font-size: 0.68rem;
     white-space: nowrap;
+  }
+
+  .moreNav {
+    position: relative;
+    display: block;
+  }
+
+  .moreSummary {
+    min-height: 3.7rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.12rem;
+    padding: 0.28rem 0.4rem;
+    color: var(--clay);
+    border-radius: var(--radius-sm);
+    font-size: 0.68rem;
+    font-weight: 680;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .moreSummary::-webkit-details-marker {
+    display: none;
+  }
+
+  .moreNav[open] .moreSummary {
+    color: var(--cocoa);
+    background: var(--surface);
+  }
+
+  .moreMenu {
+    position: fixed;
+    right: 0.75rem;
+    bottom: calc(5rem + env(safe-area-inset-bottom));
+    width: min(14rem, calc(100vw - 1.5rem));
+    display: grid;
+    gap: 0.18rem;
+    padding: 0.55rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1.1rem 1.1rem 0.45rem 1.1rem;
+    box-shadow: 0 16px 38px rgb(101 73 61 / 16%);
+  }
+
+  .moreMenu a {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.65rem;
+    color: var(--cocoa);
+    border-radius: 0.7rem;
+    font-size: 0.88rem;
+    font-weight: 720;
+    text-decoration: none;
   }
 
   .main {
@@ -725,7 +830,8 @@
   }
 
   .header {
-    align-items: flex-start;
+    display: grid;
+    align-items: start;
   }
 
   .header h1 {
@@ -733,11 +839,18 @@
   }
 
   .morningIllustration {
-    display: none;
+    width: 100%;
+    height: 6.6rem;
+    display: block;
+    margin: 0.7rem 0 0.15rem;
+    border-radius: 1rem 1rem 0.45rem 1rem;
+    object-fit: cover;
+    object-position: 72% 58%;
   }
 
   .primaryAction {
     flex: 0 0 auto;
+    justify-self: start;
     min-width: 2.85rem;
     padding: 0 0.9rem;
   }
@@ -754,14 +867,6 @@
 @media (max-width: 28rem) {
   .main {
     padding: 1rem;
-  }
-
-  .header {
-    display: grid;
-  }
-
-  .primaryAction {
-    justify-self: start;
   }
 
   .habitList {

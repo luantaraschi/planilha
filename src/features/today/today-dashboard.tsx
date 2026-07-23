@@ -11,19 +11,54 @@ import {
 import styles from "./today-dashboard.module.css";
 
 const navigation = [
-  { label: "Hoje", icon: "today", href: "#inicio" },
-  { label: "Agenda", icon: "calendar", href: "#linha-do-tempo" },
-  { label: "Tarefas", icon: "tasks", href: "#prioridades" },
-  { label: "Finanças", icon: "finance", href: "#financas" },
-  { label: "Bem-estar", icon: "wellbeing", href: "#bem-estar" },
-  { label: "Metas", icon: "goals", href: "#rituais" },
-  { label: "Notas", icon: "notes", href: "#quick-capture" },
-  { label: "Assistente", icon: "assistant", href: "#quick-capture" },
+  { label: "Hoje", icon: "today", href: "#inicio", mobile: "primary" },
+  {
+    label: "Agenda",
+    icon: "calendar",
+    href: "#linha-do-tempo",
+    mobile: "primary",
+  },
+  {
+    label: "Tarefas",
+    icon: "tasks",
+    href: "#prioridades",
+    mobile: "primary",
+  },
+  {
+    label: "Finanças",
+    icon: "finance",
+    href: "#financas",
+    mobile: "primary",
+  },
+  {
+    label: "Bem-estar",
+    icon: "wellbeing",
+    href: "#bem-estar",
+    mobile: "primary",
+  },
+  { label: "Metas", icon: "goals", href: "#rituais", mobile: "secondary" },
+  {
+    label: "Notas",
+    icon: "notes",
+    href: "#quick-capture",
+    mobile: "secondary",
+  },
+  {
+    label: "Assistente",
+    icon: "assistant",
+    href: "#quick-capture",
+    mobile: "secondary",
+  },
 ] satisfies Array<{
   label: string;
   icon: GardenIconName;
   href: string;
+  mobile: "primary" | "secondary";
 }>;
+
+const secondaryNavigation = navigation.filter(
+  (item) => item.mobile === "secondary",
+);
 
 const moods = [
   { value: "terrible", label: "Muito mal", mouth: "M10 17c2.2-2 5.8-2 8 0" },
@@ -65,6 +100,9 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
 
   return (
     <div className={styles.shell} id="inicio">
+      <a className={styles.skipLink} href="#conteudo-principal">
+        Pular para o conteúdo
+      </a>
       <aside className={styles.sidebar}>
         <a
           aria-label="Ir para o início"
@@ -82,6 +120,9 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
             <a
               aria-current={index === 0 ? "page" : undefined}
               className={index === 0 ? styles.navActive : styles.navItem}
+              data-mobile-secondary={
+                item.mobile === "secondary" ? "true" : undefined
+              }
               href={item.href}
               key={item.label}
             >
@@ -89,6 +130,20 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
               <span>{item.label}</span>
             </a>
           ))}
+          <details className={styles.moreNav}>
+            <summary className={styles.moreSummary}>
+              <GardenIcon name="goals" size={23} />
+              <span>Mais</span>
+            </summary>
+            <div className={styles.moreMenu}>
+              {secondaryNavigation.map((item) => (
+                <a href={item.href} key={item.label}>
+                  <GardenIcon name={item.icon} size={23} />
+                  <span>{item.label}</span>
+                </a>
+              ))}
+            </div>
+          </details>
         </nav>
 
         <p className={styles.sidebarNote}>
@@ -99,7 +154,7 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
         </p>
       </aside>
 
-      <main className={styles.main}>
+      <main className={styles.main} id="conteudo-principal">
         <QuickCapture
           dateLabel={formatLongDate(snapshot.date)}
           greeting={`Bom dia, ${snapshot.greetingName}`}
@@ -147,7 +202,12 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
               <div className={styles.moodOptions}>
                 {moods.map(({ value, label, mouth }) => (
                   <label key={value}>
-                    <input name="mood" type="radio" value={value} />
+                    <input
+                      aria-describedby="preview-notice"
+                      name="mood"
+                      type="radio"
+                      value={value}
+                    />
                     <span className={styles.moodGlyph}>
                       <MoodGlyph mouth={mouth} />
                     </span>
@@ -197,6 +257,7 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
               {snapshot.priorities.map((item) => (
                 <li key={item.id}>
                   <input
+                    aria-describedby="preview-notice"
                     defaultChecked={item.done}
                     id={`priority-${item.id}`}
                     type="checkbox"

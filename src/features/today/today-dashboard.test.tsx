@@ -14,6 +14,9 @@ describe("TodayDashboard", () => {
     expect(
       screen.getByRole("navigation", { name: "Principal" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Pular para o conteúdo" }),
+    ).toHaveAttribute("href", "#conteudo-principal");
     expect(screen.getByText("Planejamento da semana")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /R\$\s145,00/ }),
@@ -33,5 +36,32 @@ describe("TodayDashboard", () => {
     expect(capture).toHaveFocus();
     expect(screen.getAllByRole("radio")).toHaveLength(5);
     expect(screen.getByRole("radio", { name: "Bem" })).toBeInTheDocument();
+  });
+
+  it("confirma a captura sem sugerir persistência", async () => {
+    const user = userEvent.setup();
+    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+
+    const capture = screen.getByRole("textbox", { name: "Captura rápida" });
+    await user.type(capture, "Pagar internet");
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+
+    expect(
+      screen.getByRole("status", {
+        name: "“Pagar internet” foi adicionado só nesta prévia.",
+      }),
+    ).toBeInTheDocument();
+    expect(capture).toHaveValue("");
+  });
+
+  it("agrupa os módulos secundários em Mais", async () => {
+    const user = userEvent.setup();
+    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+
+    const more = screen.getByText("Mais").closest("summary");
+    expect(more).not.toBeNull();
+    await user.click(more!);
+
+    expect(more?.closest("details")).toHaveAttribute("open");
   });
 });
