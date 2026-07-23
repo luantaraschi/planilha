@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import {
   signIn,
@@ -12,6 +12,15 @@ import styles from "@/app/entrar/auth-page.module.css";
 
 const INITIAL_STATE: AuthState = { message: "" };
 type FormAction = (formData: FormData) => void;
+type AuthAction = "signin" | "signup" | "google";
+
+function credentialAction(event: FormEvent<HTMLFormElement>): AuthAction {
+  const submitter = (event.nativeEvent as SubmitEvent).submitter;
+  return submitter instanceof HTMLButtonElement &&
+    submitter.dataset.authAction === "signup"
+    ? "signup"
+    : "signin";
+}
 
 function AccountButtons({ signUpAction }: { signUpAction: FormAction }) {
   const { pending } = useFormStatus();
@@ -23,6 +32,7 @@ function AccountButtons({ signUpAction }: { signUpAction: FormAction }) {
       </button>
       <button
         className={styles.secondaryButton}
+        data-auth-action="signup"
         disabled={pending}
         formAction={signUpAction}
         type="submit"
@@ -48,18 +58,28 @@ function GoogleButton() {
 }
 
 export function AuthForm() {
+  const [lastAction, setLastAction] = useState<AuthAction | null>(null);
   const [signInState, signInAction] = useActionState(signIn, INITIAL_STATE);
   const [signUpState, signUpAction] = useActionState(signUp, INITIAL_STATE);
   const [googleState, googleAction] = useActionState(
     signInWithGoogle,
     INITIAL_STATE,
   );
-  const message =
-    signInState.message || signUpState.message || googleState.message;
+  const message = lastAction
+    ? {
+        signin: signInState,
+        signup: signUpState,
+        google: googleState,
+      }[lastAction].message
+    : "";
 
   return (
     <>
-      <form action={signInAction} className={styles.credentialsForm}>
+      <form
+        action={signInAction}
+        className={styles.credentialsForm}
+        onSubmit={(event) => setLastAction(credentialAction(event))}
+      >
         <label htmlFor="email">E-mail</label>
         <input
           autoComplete="email"
@@ -88,7 +108,7 @@ export function AuthForm() {
         <span>ou</span>
       </div>
 
-      <form action={googleAction}>
+      <form action={googleAction} onSubmit={() => setLastAction("google")}>
         <GoogleButton />
       </form>
     </>
