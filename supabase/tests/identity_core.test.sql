@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(25);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'preferences', 'preferences table exists');
@@ -69,6 +69,106 @@ select ok(
     'EXECUTE'
   ),
   'authenticated can execute onboarding'
+);
+
+insert into auth.users (id, email, raw_user_meta_data)
+values
+  (
+    '10000000-0000-0000-0000-000000000001',
+    'isolation-one@example.test',
+    '{"display_name":"Identity One"}'::jsonb
+  ),
+  (
+    '20000000-0000-0000-0000-000000000002',
+    'isolation-two@example.test',
+    '{"display_name":"Identity Two"}'::jsonb
+  );
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claim.sub',
+  '10000000-0000-0000-0000-000000000001',
+  true
+);
+
+select is(
+  (
+    select count(*)
+    from public.profiles
+    where user_id = '20000000-0000-0000-0000-000000000002'
+  ),
+  0::bigint,
+  'first identity cannot select the second profile'
+);
+select is(
+  (
+    select count(*)
+    from public.preferences
+    where user_id = '20000000-0000-0000-0000-000000000002'
+  ),
+  0::bigint,
+  'first identity cannot select the second preferences'
+);
+select is_empty(
+  $$
+    update public.profiles
+    set display_name = 'Cross-user write'
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning 1
+  $$,
+  'first identity cannot update the second profile'
+);
+select is_empty(
+  $$
+    update public.preferences
+    set email_reminders = false
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning 1
+  $$,
+  'first identity cannot update the second preferences'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  '20000000-0000-0000-0000-000000000002',
+  true
+);
+
+select is(
+  (
+    select count(*)
+    from public.profiles
+    where user_id = '10000000-0000-0000-0000-000000000001'
+  ),
+  0::bigint,
+  'second identity cannot select the first profile'
+);
+select is(
+  (
+    select count(*)
+    from public.preferences
+    where user_id = '10000000-0000-0000-0000-000000000001'
+  ),
+  0::bigint,
+  'second identity cannot select the first preferences'
+);
+select is_empty(
+  $$
+    update public.profiles
+    set display_name = 'Cross-user write'
+    where user_id = '10000000-0000-0000-0000-000000000001'
+    returning 1
+  $$,
+  'second identity cannot update the first profile'
+);
+select is_empty(
+  $$
+    update public.preferences
+    set email_reminders = false
+    where user_id = '10000000-0000-0000-0000-000000000001'
+    returning 1
+  $$,
+  'second identity cannot update the first preferences'
 );
 
 select * from finish();

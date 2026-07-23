@@ -22,9 +22,16 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button disabled={pending} type="submit">
-      {pending ? "Preparando…" : "Preparar meu espaço"}
-    </button>
+    <>
+      <button disabled={pending} type="submit">
+        {pending ? "Preparando…" : "Preparar meu espaço"}
+      </button>
+      {pending ? (
+        <span className="sr-only" role="status">
+          Preparando seu espaço.
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -33,11 +40,14 @@ export function OnboardingForm({ initialName }: { initialName: string }) {
     completeOnboarding,
     INITIAL_STATE,
   );
+  const errorId = state.message ? "onboarding-error" : undefined;
 
   return (
     <form action={action} className={styles.credentialsForm}>
       <label htmlFor="displayName">Como podemos chamar você?</label>
       <input
+        aria-describedby={errorId}
+        aria-invalid={state.message ? true : undefined}
         autoComplete="name"
         defaultValue={initialName}
         id="displayName"
@@ -48,7 +58,13 @@ export function OnboardingForm({ initialName }: { initialName: string }) {
       />
 
       <label htmlFor="timezone">Fuso horário</label>
-      <select defaultValue="America/Bahia" id="timezone" name="timezone">
+      <select
+        aria-describedby={errorId}
+        aria-invalid={state.message ? true : undefined}
+        defaultValue="America/Bahia"
+        id="timezone"
+        name="timezone"
+      >
         {ONBOARDING_TIMEZONES.map((timezone) => (
           <option key={timezone} value={timezone}>
             {timezoneLabels[timezone]}
@@ -76,7 +92,11 @@ export function OnboardingForm({ initialName }: { initialName: string }) {
         </label>
       </fieldset>
 
-      {state.message ? <p role="alert">{state.message}</p> : null}
+      {state.message ? (
+        <p id="onboarding-error" role="alert">
+          {state.message}
+        </p>
+      ) : null}
       <div
         className={`${styles.accountActions} ${styles.onboardingActions}`}
       >

@@ -92,4 +92,45 @@ describe("AuthForm", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Erro no Google."),
     );
   });
+
+  it("associates credential errors only after a failed submit", async () => {
+    const user = userEvent.setup();
+    actions.signIn.mockResolvedValue({ message: "Erro ao entrar." });
+    render(<AuthForm />);
+
+    const email = screen.getByRole("textbox", { name: "E-mail" });
+    const password = screen.getByLabelText("Senha");
+    expect(email).not.toHaveAttribute("aria-describedby");
+    expect(email).not.toHaveAttribute("aria-invalid");
+    expect(password).not.toHaveAttribute("aria-describedby");
+    expect(password).not.toHaveAttribute("aria-invalid");
+
+    await user.type(email, "lu@example.com");
+    await user.type(password, "12345678");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    const error = await screen.findByRole("alert");
+    expect(error).toHaveAttribute("id", "credentials-error");
+    expect(email).toHaveAttribute("aria-describedby", "credentials-error");
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(password).toHaveAttribute("aria-describedby", "credentials-error");
+    expect(password).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("announces a pending credential submission", async () => {
+    const user = userEvent.setup();
+    actions.signIn.mockImplementation(() => new Promise(() => {}));
+    render(<AuthForm />);
+
+    await user.type(
+      screen.getByRole("textbox", { name: "E-mail" }),
+      "lu@example.com",
+    );
+    await user.type(screen.getByLabelText("Senha"), "12345678");
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Enviando seus dados.",
+    );
+  });
 });

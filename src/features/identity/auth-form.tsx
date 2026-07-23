@@ -26,20 +26,27 @@ function AccountButtons({ signUpAction }: { signUpAction: FormAction }) {
   const { pending } = useFormStatus();
 
   return (
-    <div className={styles.accountActions}>
-      <button disabled={pending} type="submit">
-        {pending ? "Aguarde…" : "Entrar"}
-      </button>
-      <button
-        className={styles.secondaryButton}
-        data-auth-action="signup"
-        disabled={pending}
-        formAction={signUpAction}
-        type="submit"
-      >
-        {pending ? "Aguarde…" : "Criar minha conta"}
-      </button>
-    </div>
+    <>
+      <div className={styles.accountActions}>
+        <button disabled={pending} type="submit">
+          {pending ? "Aguarde…" : "Entrar"}
+        </button>
+        <button
+          className={styles.secondaryButton}
+          data-auth-action="signup"
+          disabled={pending}
+          formAction={signUpAction}
+          type="submit"
+        >
+          {pending ? "Aguarde…" : "Criar minha conta"}
+        </button>
+      </div>
+      {pending ? (
+        <span className="sr-only" role="status">
+          Enviando seus dados.
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -47,13 +54,20 @@ function GoogleButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button
-      className={styles.googleButton}
-      disabled={pending}
-      type="submit"
-    >
-      {pending ? "Conectando…" : "Continuar com Google"}
-    </button>
+    <>
+      <button
+        className={styles.googleButton}
+        disabled={pending}
+        type="submit"
+      >
+        {pending ? "Conectando…" : "Continuar com Google"}
+      </button>
+      {pending ? (
+        <span className="sr-only" role="status">
+          Conectando sua conta.
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -65,13 +79,17 @@ export function AuthForm() {
     signInWithGoogle,
     INITIAL_STATE,
   );
-  const message = lastAction
-    ? {
-        signin: signInState,
-        signup: signUpState,
-        google: googleState,
-      }[lastAction].message
-    : "";
+  const credentialMessage =
+    lastAction === "signin"
+      ? signInState.message
+      : lastAction === "signup"
+        ? signUpState.message
+        : "";
+  const googleMessage =
+    lastAction === "google" ? googleState.message : "";
+  const credentialErrorId = credentialMessage
+    ? "credentials-error"
+    : undefined;
 
   return (
     <>
@@ -82,6 +100,8 @@ export function AuthForm() {
       >
         <label htmlFor="email">E-mail</label>
         <input
+          aria-describedby={credentialErrorId}
+          aria-invalid={credentialMessage ? true : undefined}
           autoComplete="email"
           id="email"
           name="email"
@@ -92,6 +112,8 @@ export function AuthForm() {
 
         <label htmlFor="password">Senha</label>
         <input
+          aria-describedby={credentialErrorId}
+          aria-invalid={credentialMessage ? true : undefined}
           autoComplete="current-password"
           id="password"
           minLength={8}
@@ -100,7 +122,11 @@ export function AuthForm() {
           type="password"
         />
 
-        {message ? <p role="alert">{message}</p> : null}
+        {credentialMessage ? (
+          <p id="credentials-error" role="alert">
+            {credentialMessage}
+          </p>
+        ) : null}
         <AccountButtons signUpAction={signUpAction} />
       </form>
 
@@ -109,6 +135,7 @@ export function AuthForm() {
       </div>
 
       <form action={googleAction} onSubmit={() => setLastAction("google")}>
+        {googleMessage ? <p role="alert">{googleMessage}</p> : null}
         <GoogleButton />
       </form>
     </>

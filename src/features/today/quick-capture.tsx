@@ -59,7 +59,6 @@ export function QuickCapture({
         <GardenIcon name="assistant" size={25} />
         <span className="sr-only">Captura rápida</span>
         <input
-          aria-label="Captura rápida"
           aria-describedby="preview-notice"
           id="quick-capture"
           onChange={(event) => setDraft(event.target.value)}
@@ -73,7 +72,6 @@ export function QuickCapture({
         </span>
       </label>
       <p
-        aria-label={feedback}
         className={styles.previewNotice}
         id="preview-notice"
         role="status"

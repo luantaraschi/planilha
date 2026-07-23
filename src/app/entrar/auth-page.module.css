@@ -204,7 +204,7 @@
   line-height: 1.4;
 }
 
-.credentialsForm [role="alert"] {
+.paper form [role="alert"] {
   margin: 0.8rem 0 0;
   color: var(--raspberry);
   font-size: 0.88rem;

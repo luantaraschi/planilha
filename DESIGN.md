@@ -110,6 +110,17 @@ espessura de traço e iluminação.
 
 ## Implemented Components
 
+- **Login e criação de conta:** formulário de e-mail/senha com rótulos
+  nativos, feedback de validação, ações separadas de entrada/cadastro e opção
+  de acesso com Google.
+- **Onboarding:** primeira configuração protegida para nome, fuso horário,
+  lembretes por e-mail e consentimento opcional para processamento com IA.
+- **Conta e logout:** o nome autenticado personaliza Hoje; `Sair` está
+  disponível na navegação desktop e no menu móvel `Mais`.
+- **Estados dos formulários de identidade:** restrições nativas de
+  preenchimento/tamanho mínimo, ações desabilitadas e anunciadas durante envio,
+  erros inline associados aos campos e redirects protegidos para perfis sem
+  sessão ou onboarding.
 - **Today shell:** sidebar persistente no desktop e barra inferior com cinco
   destinos + `Mais` no mobile, com link de salto para o conteúdo principal.
 - **Morning header:** saudação, data localizada, ação `Adicionar` e ilustração

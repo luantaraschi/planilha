@@ -46,11 +46,12 @@ describe("TodayDashboard", () => {
     await user.type(capture, "Pagar internet");
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
 
-    expect(
-      screen.getByRole("status", {
-        name: "“Pagar internet” foi adicionado só nesta prévia.",
-      }),
-    ).toBeInTheDocument();
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(
+      "“Pagar internet” foi adicionado só nesta prévia.",
+    );
+    expect(status).not.toHaveAttribute("aria-label");
+    expect(capture).not.toHaveAttribute("aria-label");
     expect(capture).toHaveValue("");
   });
 
