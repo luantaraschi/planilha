@@ -177,8 +177,8 @@ create policy audit_events_insert_own on public.audit_events
 for insert to authenticated
 with check ((select auth.uid()) = user_id);
 
-revoke all on public.profiles, public.preferences, public.audit_events from anon;
+revoke all on public.profiles, public.preferences, public.audit_events from public, anon, authenticated;
 grant select, insert, update on public.profiles, public.preferences to authenticated;
 grant select, insert on public.audit_events to authenticated;
+revoke all on function public.complete_onboarding(text, text, boolean, boolean) from public, anon;
 grant execute on function public.complete_onboarding(text, text, boolean, boolean) to authenticated;
-revoke execute on function public.complete_onboarding(text, text, boolean, boolean) from anon;

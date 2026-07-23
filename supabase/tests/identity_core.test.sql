@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(17);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'preferences', 'preferences table exists');
@@ -41,6 +41,34 @@ select policies_are(
   'audit_events',
   array['audit_events_insert_own', 'audit_events_select_own'],
   'audit log cannot be changed or deleted through the API'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.profiles', 'TRUNCATE'),
+  'authenticated cannot truncate profiles'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.preferences', 'TRUNCATE'),
+  'authenticated cannot truncate preferences'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.audit_events', 'TRUNCATE'),
+  'authenticated cannot truncate audit events'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.complete_onboarding(text,text,boolean,boolean)',
+    'EXECUTE'
+  ),
+  'anon cannot execute onboarding'
+);
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.complete_onboarding(text,text,boolean,boolean)',
+    'EXECUTE'
+  ),
+  'authenticated can execute onboarding'
 );
 
 select * from finish();
