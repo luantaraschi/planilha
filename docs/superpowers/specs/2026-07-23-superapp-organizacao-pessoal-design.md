@@ -424,14 +424,55 @@ Direção aprovada: **Jardim de Pêssego**.
 Tons pastéis são usados em superfícies e destaques. Textos e controles usam
 cores escuras com contraste WCAG AA.
 
-### 15.3 Componentes
+### 15.3 Direção de arte
 
-- cantos arredondados moderados;
-- sombras suaves e poucas bordas;
-- tipografia única, arredondada e legível: Nunito Sans;
-- ícones de contorno simples;
-- ilustrações discretas somente em estados vazios e onboarding;
-- animações curtas e opcionais, respeitando `prefers-reduced-motion`.
+A interface deve parecer criada por um estúdio de produto, não por composição
+automática de componentes genéricos. A referência física é um planner ilustrado
+contemporâneo sobre uma mesa de café da manhã: abas, campos de cor, desenhos
+autorais e informação organizada com calma.
+
+- cantos arredondados moderados, sem aplicar o mesmo raio a tudo;
+- sombras ambientais e raras;
+- hierarquia editorial e linhas do tempo no lugar de grades infinitas de cards;
+- tipografia arredondada, moderna e legível, validada com datas, valores e
+  textos em português antes de ser fixada;
+- animações curtas e funcionais, respeitando `prefers-reduced-motion`;
+- estados vazios, onboarding, conquistas, revisão semanal e erros importantes
+  recebem ilustrações próprias.
+
+### 15.4 Iconografia
+
+A base preferencial será
+[Streamline Plump](https://blog.streamlinehq.com/plump/), um sistema curvilíneo
+e amigável construído em grade de 48 × 48. A variante Line atende navegação e
+controles pequenos; Duo atende módulos, destaques e momentos de celebração.
+
+O conjunto gratuito oferece cobertura inicial, mas a licença e a cobertura
+necessárias para publicação comercial serão confirmadas antes do lançamento.
+Conceitos centrais sem ícone adequado recebem pictogramas desenhados na mesma
+gramática.
+
+Não serão usados como identidade final:
+
+- Lucide, Heroicons ou ícones do sistema;
+- emojis substituindo iconografia;
+- mistura de packs com traços e proporções diferentes;
+- quadrados pastéis genéricos atrás de todos os ícones.
+
+### 15.5 Ilustrações
+
+As ilustrações serão autorais e art-directed. O sistema usa objetos cotidianos,
+folhas, flores, cadernos, relógios, carteiras e pequenas cenas da rotina com:
+
+- contorno orgânico consistente;
+- formas chapadas na paleta Jardim de Pêssego;
+- textura discreta;
+- mesma perspectiva e iluminação;
+- composição simples o suficiente para não disputar com a tarefa.
+
+Não serão usadas ilustrações corporativas genéricas, personagens 3D de banco,
+blobs, órbitas, brilho neon ou gradientes associados a interfaces genéricas de
+IA.
 
 ## 16. Acessibilidade
 
@@ -441,7 +482,7 @@ cores escuras com contraste WCAG AA.
 - rótulos associados a campos;
 - ícones nunca são a única forma de comunicar estado;
 - gráficos possuem resumo textual;
-- humor pode ser escolhido por texto além de emoji;
+- humor pode ser escolhido por texto além do glifo ilustrado;
 - valores não dependem somente de verde ou vermelho;
 - alvos de toque adequados no celular.
 
@@ -474,7 +515,32 @@ cores escuras com contraste WCAG AA.
 - executar revisão semanal;
 - exportar e excluir conta.
 
-## 18. Critérios de aceite
+## 18. Qualidade de frontend
+
+A implementação visual deve usar as skills relevantes disponíveis, incluindo:
+
+- **Impeccable** para direção, acabamento, adaptação, hardening, auditoria e
+  polish;
+- **frontend-design** para composição e execução dos novos fluxos;
+- **fixing-accessibility** para a verificação específica de acessibilidade;
+- **vercel-react-best-practices** para qualidade e desempenho React/Next.js.
+
+Antes da primeira edição de interface, o processo Impeccable deve carregar o
+brief do produto, o sistema visual e o craft floor. Antes de concluir:
+
+1. inspecionar desktop e celular com conteúdo realista;
+2. comparar o resultado com `PRODUCT.md` e `DESIGN.md`;
+3. corrigir estados vazios, carregamento, erro, overflow e permissões;
+4. rodar o detector mecânico do Impeccable uma vez sobre os alvos finais;
+5. executar auditoria de acessibilidade e desempenho;
+6. solicitar a revisão final independente prevista pelo Impeccable;
+7. atualizar `DESIGN.md` com os tokens e componentes que sobreviverem à
+   implementação.
+
+Uma tela não passa no aceite se puder ser confundida com um template SaaS ou
+dashboard de “vibe code”, mesmo que esteja funcional.
+
+## 19. Critérios de aceite
 
 A primeira versão estará pronta quando:
 
@@ -489,8 +555,11 @@ A primeira versão estará pronta quando:
 8. falhas de IA ou integração não impedirem uso manual;
 9. exportação e exclusão de conta funcionarem;
 10. desktop e celular atenderem aos requisitos básicos de acessibilidade.
+11. iconografia e ilustrações seguirem uma gramática visual única;
+12. estados vazios e críticos terem tratamento projetado, sem placeholders;
+13. o acabamento passar pelo quality gate de frontend.
 
-## 19. Evolução posterior
+## 20. Evolução posterior
 
 Após validar uso recorrente:
 
