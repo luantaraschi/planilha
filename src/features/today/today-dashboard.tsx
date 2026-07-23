@@ -2,6 +2,7 @@ import {
   GardenIcon,
   type GardenIconName,
 } from "@/components/garden-icon";
+import { signOut } from "@/features/identity/auth-actions";
 import { QuickCapture } from "./quick-capture";
 import {
   formatCurrency,
@@ -78,6 +79,29 @@ const timelineLabels = {
   bill: "Conta",
 } as const;
 
+function SignOutIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      fill="none"
+      height="23"
+      viewBox="0 0 24 24"
+      width="23"
+    >
+      <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M9 12h9" />
+    </svg>
+  );
+}
+
+function SignOutButton() {
+  return (
+    <button className={styles.signOutButton} type="submit">
+      <SignOutIcon />
+      <span>Sair</span>
+    </button>
+  );
+}
+
 function MoodGlyph({ mouth }: { mouth: string }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 28 28">
@@ -142,8 +166,14 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
                   <span>{item.label}</span>
                 </a>
               ))}
+              <form action={signOut}>
+                <SignOutButton />
+              </form>
             </div>
           </details>
+          <form action={signOut} className={styles.desktopSignOut}>
+            <SignOutButton />
+          </form>
         </nav>
 
         <p className={styles.sidebarNote}>

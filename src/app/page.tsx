@@ -1,6 +1,15 @@
+import { redirect } from "next/navigation";
+import { getCurrentIdentity } from "@/features/identity/identity-repository";
 import { TodayDashboard } from "@/features/today/today-dashboard";
-import { TODAY_DEMO } from "@/features/today/today-model";
+import { buildTodaySnapshot } from "@/features/today/today-model";
 
-export default function HomePage() {
-  return <TodayDashboard snapshot={TODAY_DEMO} />;
+export default async function HomePage() {
+  const { profile } = await getCurrentIdentity();
+  if (!profile.onboarding_completed) redirect("/onboarding");
+
+  return (
+    <TodayDashboard
+      snapshot={buildTodaySnapshot(profile.display_name)}
+    />
+  );
 }

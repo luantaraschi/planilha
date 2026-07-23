@@ -63,5 +63,8 @@ describe("TodayDashboard", () => {
     await user.click(more!);
 
     expect(more?.closest("details")).toHaveAttribute("open");
+    expect(
+      screen.getAllByRole("button", { name: "Sair" }),
+    ).toHaveLength(2);
   });
 });

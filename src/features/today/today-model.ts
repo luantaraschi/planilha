@@ -63,6 +63,10 @@ export const TODAY_DEMO: TodaySnapshot = {
   projectedBalanceCents: 215_000,
 };
 
+export function buildTodaySnapshot(greetingName: string): TodaySnapshot {
+  return { ...TODAY_DEMO, greetingName };
+}
+
 export function formatCurrency(valueInCents: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",

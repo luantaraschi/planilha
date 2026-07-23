@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatCurrency, formatLongDate, TODAY_DEMO } from "./today-model";
+import {
+  buildTodaySnapshot,
+  formatCurrency,
+  formatLongDate,
+  TODAY_DEMO,
+} from "./today-model";
 
 describe("today model", () => {
   it("formata centavos inteiros como reais", () => {
@@ -16,5 +21,12 @@ describe("today model", () => {
     expect(TODAY_DEMO.timeline).toHaveLength(4);
     expect(TODAY_DEMO.freeToSpendCents).toBeGreaterThan(0);
     expect(TODAY_DEMO.priorities.filter((item) => item.done)).toHaveLength(1);
+  });
+
+  it("personalizes the demo snapshot without mutating the shared seed", () => {
+    const snapshot = buildTodaySnapshot("Luan");
+
+    expect(snapshot.greetingName).toBe("Luan");
+    expect(TODAY_DEMO.greetingName).toBe("Lu");
   });
 });

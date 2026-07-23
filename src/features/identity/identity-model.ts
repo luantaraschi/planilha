@@ -1,5 +1,19 @@
 type Result<T> = { ok: true; value: T } | { ok: false; message: string };
 
+export const ONBOARDING_TIMEZONES = [
+  "America/Bahia",
+  "America/Sao_Paulo",
+  "America/Fortaleza",
+  "America/Manaus",
+] as const;
+
+export type OnboardingInput = {
+  displayName: string;
+  timezone: (typeof ONBOARDING_TIMEZONES)[number];
+  emailReminders: boolean;
+  aiConsent: boolean;
+};
+
 export function normalizeAuthInput(
   formData: FormData,
 ): Result<{ email: string; password: string }> {
@@ -18,12 +32,7 @@ export function normalizeAuthInput(
 
 export function normalizeOnboardingInput(
   formData: FormData,
-): Result<{
-  displayName: string;
-  timezone: string;
-  emailReminders: boolean;
-  aiConsent: boolean;
-}> {
+): Result<OnboardingInput> {
   const displayName = String(formData.get("displayName") ?? "").trim();
   const timezone = String(formData.get("timezone") ?? "").trim();
 
@@ -31,7 +40,11 @@ export function normalizeOnboardingInput(
     return { ok: false, message: "Informe um nome com até 80 caracteres." };
   }
 
-  if (timezone.length < 1 || timezone.length > 80) {
+  if (
+    !ONBOARDING_TIMEZONES.includes(
+      timezone as (typeof ONBOARDING_TIMEZONES)[number],
+    )
+  ) {
     return { ok: false, message: "Escolha um fuso horário válido." };
   }
 
@@ -39,7 +52,7 @@ export function normalizeOnboardingInput(
     ok: true,
     value: {
       displayName,
-      timezone,
+      timezone: timezone as OnboardingInput["timezone"],
       emailReminders: formData.get("emailReminders") === "on",
       aiConsent: formData.get("aiConsent") === "on",
     },

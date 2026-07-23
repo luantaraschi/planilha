@@ -37,4 +37,15 @@ describe("identity input", () => {
       },
     });
   });
+
+  it("rejects an unsupported onboarding timezone", () => {
+    const data = new FormData();
+    data.set("displayName", "Lu");
+    data.set("timezone", "Mars/Olympus");
+
+    expect(normalizeOnboardingInput(data)).toEqual({
+      ok: false,
+      message: "Escolha um fuso horário válido.",
+    });
+  });
 });
