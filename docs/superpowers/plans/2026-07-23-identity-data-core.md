@@ -92,14 +92,14 @@ Create `supabase/tests/identity_core.test.sql`:
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(17);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'preferences', 'preferences table exists');
 select has_table('public', 'audit_events', 'audit_events table exists');
 select col_type_is('public', 'profiles', 'user_id', 'uuid', 'profile ownership uses uuid');
 select col_type_is('public', 'preferences', 'currency', 'text', 'currency is text');
-select col_default_is('public', 'preferences', 'currency', '''BRL''::text', 'currency defaults to BRL');
+select col_default_is('public', 'preferences', 'currency', 'BRL', 'currency defaults to BRL');
 select is(
   (select relrowsecurity from pg_class where oid = 'public.profiles'::regclass),
   true,
@@ -132,6 +132,34 @@ select policies_are(
   'audit_events',
   array['audit_events_insert_own', 'audit_events_select_own'],
   'audit log cannot be changed or deleted through the API'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.profiles', 'TRUNCATE'),
+  'authenticated cannot truncate profiles'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.preferences', 'TRUNCATE'),
+  'authenticated cannot truncate preferences'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.audit_events', 'TRUNCATE'),
+  'authenticated cannot truncate audit events'
+);
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.complete_onboarding(text,text,boolean,boolean)',
+    'EXECUTE'
+  ),
+  'anon cannot execute onboarding'
+);
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.complete_onboarding(text,text,boolean,boolean)',
+    'EXECUTE'
+  ),
+  'authenticated can execute onboarding'
 );
 
 select * from finish();
@@ -343,11 +371,13 @@ create policy audit_events_insert_own on public.audit_events
 for insert to authenticated
 with check ((select auth.uid()) = user_id);
 
-revoke all on public.profiles, public.preferences, public.audit_events from anon;
+revoke all on public.profiles, public.preferences, public.audit_events
+from public, anon, authenticated;
 grant select, insert, update on public.profiles, public.preferences to authenticated;
 grant select, insert on public.audit_events to authenticated;
+revoke all on function public.complete_onboarding(text, text, boolean, boolean)
+from public, anon;
 grant execute on function public.complete_onboarding(text, text, boolean, boolean) to authenticated;
-revoke execute on function public.complete_onboarding(text, text, boolean, boolean) from anon;
 ```
 
 - [ ] **Step 6: Reset the database and verify GREEN**
@@ -359,7 +389,7 @@ npm run db:reset
 npm run db:test
 ```
 
-Expected: 12 pgTAP assertions pass.
+Expected: 17 pgTAP assertions pass.
 
 - [ ] **Step 7: Add the environment contract**
 
@@ -871,4 +901,3 @@ Expected: database and UI tests pass, audit reports zero vulnerabilities, produc
 git add README.md DESIGN.md src supabase package.json package-lock.json .env.example
 git commit -m "feat: finish identity and data core"
 ```
-
