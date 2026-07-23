@@ -1,0 +1,305 @@
+.page {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(24rem, 0.82fr);
+  background: var(--peach);
+}
+
+.morning {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(1.5rem, 4vw, 3.75rem);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.illustration {
+  z-index: -2;
+  object-fit: cover;
+  object-position: 58% center;
+}
+
+.morning::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: rgb(255 229 213 / 28%);
+  content: "";
+}
+
+.brand {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--cocoa);
+  font-size: 1.05rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.brand svg {
+  color: var(--raspberry);
+}
+
+.welcome {
+  max-width: 33rem;
+  padding: 1.6rem 0 0;
+  text-shadow: 0 1px var(--surface);
+}
+
+.welcome p,
+.paper header p {
+  margin: 0;
+  color: var(--raspberry);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.welcome h1 {
+  max-width: 10ch;
+  margin: 0.55rem 0 0.9rem;
+  font-size: clamp(2.8rem, 6vw, 5.8rem);
+  font-weight: 850;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+
+.welcome > span {
+  display: block;
+  max-width: 33ch;
+  color: var(--clay);
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.paper {
+  position: relative;
+  z-index: 1;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(2rem, 6vw, 5.5rem);
+  background: var(--surface);
+  box-shadow: -1.2rem 0 3.5rem rgb(101 73 61 / 8%);
+}
+
+.paper::after {
+  position: absolute;
+  inset: 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  content: "";
+}
+
+.paper > *:not(.botanicalTab) {
+  position: relative;
+  z-index: 1;
+}
+
+.botanicalTab {
+  position: absolute;
+  top: 16%;
+  left: -1.35rem;
+  width: 2.7rem;
+  height: 4.5rem;
+  display: grid;
+  place-items: center;
+  color: var(--raspberry);
+  background: var(--sage);
+  border: 1px solid rgb(69 53 47 / 10%);
+  border-radius: 1.3rem 0 0 1.3rem;
+  box-shadow: -0.4rem 0.4rem 1rem rgb(101 73 61 / 8%);
+}
+
+.paper header {
+  margin-bottom: 2rem;
+}
+
+.paper h2 {
+  margin: 0.45rem 0 0.65rem;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.paper header > span,
+.paper > small {
+  color: var(--clay);
+  line-height: 1.5;
+}
+
+.credentialsForm {
+  display: grid;
+}
+
+.credentialsForm label {
+  margin: 1rem 0 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.credentialsForm input {
+  min-height: 3.25rem;
+  width: 100%;
+  padding: 0.78rem 0.95rem;
+  color: var(--cocoa);
+  background: var(--porcelain);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.credentialsForm input::placeholder {
+  color: var(--clay);
+  opacity: 0.72;
+}
+
+.credentialsForm [role="alert"] {
+  margin: 0.8rem 0 0;
+  color: var(--raspberry);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.accountActions {
+  display: grid;
+  grid-template-columns: 0.72fr 1.28fr;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+}
+
+.accountActions button,
+.googleButton {
+  min-height: 3.15rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.accountActions button:first-child {
+  color: var(--surface);
+  background: var(--raspberry);
+  border: 1px solid var(--raspberry);
+}
+
+.accountActions .secondaryButton,
+.googleButton {
+  color: var(--cocoa);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.accountActions button:disabled,
+.googleButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1.25rem 0;
+  color: var(--clay);
+  font-size: 0.8rem;
+}
+
+.divider::before,
+.divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: "";
+}
+
+.googleButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+.paper > small {
+  display: block;
+  margin-top: 1.6rem;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .accountActions button,
+  .googleButton {
+    transition:
+      transform 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .accountActions button:hover:not(:disabled),
+  .googleButton:hover:not(:disabled) {
+    transform: translateY(-0.1rem);
+    box-shadow: 0 0.5rem 1.2rem rgb(101 73 61 / 10%);
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .morning {
+    min-height: 25rem;
+    padding: 1.4rem;
+  }
+
+  .illustration {
+    object-position: 60% center;
+  }
+
+  .welcome {
+    padding-top: 7rem;
+  }
+
+  .welcome h1 {
+    max-width: 12ch;
+    font-size: clamp(2.6rem, 13vw, 4rem);
+  }
+
+  .paper {
+    min-height: auto;
+    padding: 4.5rem 2rem;
+    box-shadow: 0 -1.2rem 3rem rgb(101 73 61 / 8%);
+  }
+
+  .botanicalTab {
+    top: -1.35rem;
+    left: calc(50% - 2.25rem);
+    width: 4.5rem;
+    height: 2.7rem;
+    border-radius: 1.3rem 1.3rem 0 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .paper {
+    padding-inline: 1.5rem;
+  }
+
+  .paper::after {
+    inset-inline: 0.7rem;
+  }
+
+  .accountActions {
+    grid-template-columns: 1fr;
+  }
+}
