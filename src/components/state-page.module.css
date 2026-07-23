@@ -1,0 +1,143 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  padding: 2rem;
+  overflow: hidden;
+  background: var(--porcelain);
+}
+
+.page > * {
+  max-width: 41rem;
+}
+
+.page > p {
+  margin: 1.7rem 0 0;
+  color: var(--raspberry);
+  font-weight: 820;
+}
+
+.page h1 {
+  margin: 0.45rem 0 0;
+  font-size: clamp(2.35rem, 6vw, 4.8rem);
+  font-weight: 840;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.action {
+  margin-top: 1.4rem;
+}
+
+.action button,
+.action a {
+  min-height: 2.85rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 1.1rem;
+  color: white;
+  background: var(--raspberry);
+  border: 0;
+  border-radius: 0.9rem 0.9rem 0.9rem 0.38rem;
+  box-shadow: 0 10px 24px rgb(130 38 66 / 18%);
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.scene {
+  position: relative;
+  width: 8.5rem;
+  height: 7.4rem;
+}
+
+.sun {
+  position: absolute;
+  top: 0.1rem;
+  right: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  background: var(--butter);
+  border-radius: 47% 53% 49% 51%;
+}
+
+.stem {
+  position: absolute;
+  bottom: 0.2rem;
+  left: 3.95rem;
+  width: 0.15rem;
+  height: 4.8rem;
+  background: #63805e;
+  border-radius: 1rem;
+  transform: rotate(-8deg);
+}
+
+.flower {
+  position: absolute;
+  top: 1.35rem;
+  left: 1.8rem;
+  width: 4.4rem;
+  height: 4.4rem;
+  display: grid;
+  place-items: center;
+  color: var(--raspberry);
+  background: var(--tea-rose);
+  border: 1px solid rgb(167 54 85 / 12%);
+  border-radius: 42% 58% 48% 52%;
+  box-shadow: 0.3rem 0.55rem 1.4rem rgb(112 51 74 / 9%);
+}
+
+.petals i {
+  position: absolute;
+  width: 1.6rem;
+  height: 0.85rem;
+  background: var(--peach);
+  border-radius: 85% 15% 85% 15%;
+}
+
+.petals i:nth-child(1) {
+  bottom: 0.4rem;
+  left: 5rem;
+  transform: rotate(22deg);
+}
+
+.petals i:nth-child(2) {
+  bottom: 1.2rem;
+  left: 6.7rem;
+  transform: rotate(-18deg) scale(0.72);
+}
+
+.petals i:nth-child(3) {
+  bottom: 0.1rem;
+  left: 7.5rem;
+  transform: rotate(38deg) scale(0.5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scene {
+    animation: settle 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .action button,
+  .action a {
+    transition:
+      transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .action button:hover,
+  .action a:hover {
+    transform: translateY(-0.12rem);
+    box-shadow: 0 13px 28px rgb(130 38 66 / 22%);
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0.4;
+    filter: blur(0.25rem);
+    transform: translateY(0.6rem) rotate(-3deg);
+  }
+}

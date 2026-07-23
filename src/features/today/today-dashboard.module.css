@@ -91,9 +91,12 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  min-height: 10rem;
 }
 
 .headerCopy {
+  position: relative;
+  z-index: 1;
   max-width: 44rem;
 }
 
@@ -124,6 +127,8 @@
 }
 
 .primaryAction {
+  position: relative;
+  z-index: 2;
   min-height: 2.85rem;
   padding: 0 1.2rem;
   color: white;
@@ -133,6 +138,14 @@
   box-shadow: 0 10px 24px rgb(130 38 66 / 18%);
   font-weight: 800;
   cursor: pointer;
+}
+
+.morningIllustration {
+  width: min(31vw, 27rem);
+  height: auto;
+  margin: -2.2rem -1.4rem -2.1rem auto;
+  object-fit: contain;
+  mix-blend-mode: multiply;
 }
 
 .capture {
@@ -622,6 +635,10 @@
 }
 
 @media (max-width: 68rem) {
+  .morningIllustration {
+    width: min(27vw, 20rem);
+  }
+
   .contentGrid {
     grid-template-columns: minmax(0, 1.25fr) minmax(17rem, 0.75fr);
   }
@@ -713,6 +730,10 @@
 
   .header h1 {
     font-size: clamp(2.2rem, 11vw, 3.2rem);
+  }
+
+  .morningIllustration {
+    display: none;
   }
 
   .primaryAction {

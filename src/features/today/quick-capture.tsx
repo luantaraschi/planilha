@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 import { GardenIcon } from "@/components/garden-icon";
 import styles from "./today-dashboard.module.css";
@@ -23,6 +24,14 @@ export function QuickCapture({
             Tudo o que merece sua atenção, com calma.
           </p>
         </div>
+        <Image
+          alt=""
+          className={styles.morningIllustration}
+          height={800}
+          preload
+          src="/illustrations/morning-garden.webp"
+          width={1200}
+        />
         <button
           className={styles.primaryAction}
           onClick={() => inputRef.current?.focus()}
