@@ -76,12 +76,14 @@ describe("OnboardingForm", () => {
     actions.completeOnboarding.mockImplementation(() => new Promise(() => {}));
     render(<OnboardingForm initialName="Lu" />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Preparar meu espaço" }),
-    );
+    const submit = screen.getByRole("button", {
+      name: "Preparar meu espaço",
+    });
+    await user.click(submit);
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Preparando seu espaço.",
     );
+    expect(submit).toBeDisabled();
   });
 });

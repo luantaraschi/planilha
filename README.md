@@ -31,7 +31,7 @@ npm run db:reset
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000). Para encerrar os serviços
+Abra [http://127.0.0.1:3000](http://127.0.0.1:3000). Para encerrar os serviços
 locais do Supabase:
 
 ```powershell
@@ -43,11 +43,15 @@ npm run supabase:stop
 ```powershell
 npm run db:test
 npm test
+npm run test:browser
 npm run typecheck
 npm run lint
 npm audit
 npm run build
 ```
+
+`npm run test:browser` exige o app local ativo e Google Chrome. Use
+`APP_URL`/`CHROME_PATH` se a URL ou o executável não estiverem nos padrões.
 
 O projeto ainda não possui configuração de Supabase hospedado ou deploy
 remoto.

@@ -122,15 +122,21 @@ describe("AuthForm", () => {
     actions.signIn.mockImplementation(() => new Promise(() => {}));
     render(<AuthForm />);
 
+    const signIn = screen.getByRole("button", { name: "Entrar" });
+    const signUp = screen.getByRole("button", {
+      name: "Criar minha conta",
+    });
     await user.type(
       screen.getByRole("textbox", { name: "E-mail" }),
       "lu@example.com",
     );
     await user.type(screen.getByLabelText("Senha"), "12345678");
-    await user.click(screen.getByRole("button", { name: "Entrar" }));
+    await user.click(signIn);
 
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Enviando seus dados.",
     );
+    expect(signIn).toBeDisabled();
+    expect(signUp).toBeDisabled();
   });
 });

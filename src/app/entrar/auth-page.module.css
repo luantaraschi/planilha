@@ -161,7 +161,7 @@
 
 .credentialsForm > input::placeholder {
   color: var(--clay);
-  opacity: 0.72;
+  opacity: 1;
 }
 
 .preferenceGroup {
@@ -302,6 +302,14 @@
     grid-template-columns: 1fr;
   }
 
+  .brand {
+    padding: 0.55rem 0.7rem;
+    background: var(--porcelain);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-ambient);
+  }
+
   .morning {
     min-height: 25rem;
     padding: 1.4rem;
@@ -312,7 +320,11 @@
   }
 
   .welcome {
-    padding-top: 7rem;
+    padding: 1.2rem;
+    background: var(--porcelain);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-ambient);
   }
 
   .welcome h1 {

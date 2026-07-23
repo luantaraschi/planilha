@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(33);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'preferences', 'preferences table exists');
@@ -95,6 +95,45 @@ select is(
   (
     select count(*)
     from public.profiles
+    where user_id = '10000000-0000-0000-0000-000000000001'
+  ),
+  1::bigint,
+  'first identity can select its own profile'
+);
+select is(
+  (
+    select count(*)
+    from public.preferences
+    where user_id = '10000000-0000-0000-0000-000000000001'
+  ),
+  1::bigint,
+  'first identity can select its own preferences'
+);
+select results_eq(
+  $$
+    update public.profiles
+    set display_name = 'Identity One Updated'
+    where user_id = '10000000-0000-0000-0000-000000000001'
+    returning display_name
+  $$,
+  $$ values ('Identity One Updated'::text) $$,
+  'first identity can update its own profile'
+);
+select results_eq(
+  $$
+    update public.preferences
+    set email_reminders = false
+    where user_id = '10000000-0000-0000-0000-000000000001'
+    returning email_reminders
+  $$,
+  $$ values (false) $$,
+  'first identity can update its own preferences'
+);
+
+select is(
+  (
+    select count(*)
+    from public.profiles
     where user_id = '20000000-0000-0000-0000-000000000002'
   ),
   0::bigint,
@@ -132,6 +171,45 @@ select set_config(
   'request.jwt.claim.sub',
   '20000000-0000-0000-0000-000000000002',
   true
+);
+
+select is(
+  (
+    select count(*)
+    from public.profiles
+    where user_id = '20000000-0000-0000-0000-000000000002'
+  ),
+  1::bigint,
+  'second identity can select its own profile'
+);
+select is(
+  (
+    select count(*)
+    from public.preferences
+    where user_id = '20000000-0000-0000-0000-000000000002'
+  ),
+  1::bigint,
+  'second identity can select its own preferences'
+);
+select results_eq(
+  $$
+    update public.profiles
+    set display_name = 'Identity Two Updated'
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning display_name
+  $$,
+  $$ values ('Identity Two Updated'::text) $$,
+  'second identity can update its own profile'
+);
+select results_eq(
+  $$
+    update public.preferences
+    set email_reminders = false
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning email_reminders
+  $$,
+  $$ values (false) $$,
+  'second identity can update its own preferences'
 );
 
 select is(

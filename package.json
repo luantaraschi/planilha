@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:browser": "node scripts/browser-identity-gate.mjs",
     "test:watch": "vitest",
     "supabase:start": "supabase start",
     "supabase:stop": "supabase stop",
