@@ -4,6 +4,16 @@
 
 **Goal:** Deliver the approved personal organization superapp as independent, testable vertical slices.
 
+## Cost and integration rule
+
+- The core app must remain free to run with local and open-source dependencies.
+- AI is optional and uses a user-owned provider key; the app adds no subscription
+  or markup to API usage.
+- The settings screen owns provider, model, instructions and encrypted key
+  management. When AI is disabled or unavailable, useful local analysis remains.
+- Open Finance is deferred. Bank data enters through manual records and CSV/OFX
+  import until a later, separately approved integration.
+
 ## Phase order
 
 1. **Foundation and Today shell**  
@@ -17,7 +27,8 @@
 
 3. **Finance**  
    Accounts, transactions, categories, transfers, recurring entries, budgets,
-   deterministic projections, CSV/OFX preview and duplicate detection.
+   deterministic projections, CSV/OFX preview, duplicate detection and local
+   financial analysis.
 
 4. **Tasks and projects**  
    Inbox, Today, Upcoming, projects, recurrence, subtasks, duration and kanban.
@@ -30,8 +41,9 @@
    Check-ins, streaks, mood and energy logs, linked goals and searchable notes.
 
 7. **Assistant and universal capture**  
-   OpenAI tool boundary, structured action drafts, confirmation flow, chat,
-   daily summary and weekly review.
+   User-owned OpenAI key and model settings, encrypted server-side credential
+   storage, structured action drafts, confirmation flow, chat with local
+   fallback, daily summary and weekly review.
 
 8. **Alerts and delivery**  
    Supabase Cron, in-app notifications, Resend email delivery, retries and

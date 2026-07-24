@@ -1,7 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { GardenIcon } from "@/components/garden-icon";
+import {
+  askFinanceAssistant,
+  type FinanceAssistantResult,
+} from "@/features/ai/finance-assistant-actions";
 import {
   answerFinanceQuestion,
   type FinanceSnapshot,
@@ -26,6 +30,11 @@ export function FinanceAssistant({
   snapshot: FinanceSnapshot;
 }) {
   const [question, setQuestion] = useState("");
+  const [pending, setPending] = useState(false);
+  const [assistantMode, setAssistantMode] =
+    useState<FinanceAssistantResult["mode"]>("local");
+  const [notice, setNotice] = useState("");
+  const nextMessageId = useRef(2);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -37,25 +46,48 @@ export function FinanceAssistant({
     },
   ]);
 
-  function ask(value: string) {
+  async function ask(value: string) {
     const trimmed = value.trim();
-    if (!trimmed) return;
-    const nextId = messages.length + 1;
+    if (!trimmed || pending) return;
+    const userMessageId = nextMessageId.current;
+    nextMessageId.current += 1;
     setMessages((current) => [
       ...current,
-      { id: nextId, author: "user", text: trimmed },
-      {
-        id: nextId + 1,
-        author: "assistant",
-        text: answerFinanceQuestion(trimmed, snapshot),
-      },
+      { id: userMessageId, author: "user", text: trimmed },
     ]);
     setQuestion("");
+    setPending(true);
+    setNotice("");
+
+    let result: FinanceAssistantResult;
+    try {
+      result = await askFinanceAssistant(trimmed);
+    } catch {
+      result = {
+        answer: answerFinanceQuestion(trimmed, snapshot),
+        mode: "local",
+        notice: "A conexão falhou; usei a análise local.",
+      };
+    }
+
+    const assistantMessageId = nextMessageId.current;
+    nextMessageId.current += 1;
+    setMessages((current) => [
+      ...current,
+      {
+        id: assistantMessageId,
+        author: "assistant",
+        text: result.answer,
+      },
+    ]);
+    setAssistantMode(result.mode);
+    setNotice(result.notice);
+    setPending(false);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    ask(question);
+    void ask(question);
   }
 
   return (
@@ -80,11 +112,27 @@ export function FinanceAssistant({
             {message.text}
           </p>
         ))}
+        {pending ? (
+          <p className={styles.message} data-author="assistant">
+            Pensando com cuidado…
+          </p>
+        ) : null}
       </div>
+
+      {notice ? (
+        <p className={styles.assistantAlert} role="status">
+          {notice}
+        </p>
+      ) : null}
 
       <div aria-label="Perguntas sugeridas" className={styles.suggestions}>
         {suggestions.map((suggestion) => (
-          <button key={suggestion} onClick={() => ask(suggestion)} type="button">
+          <button
+            disabled={pending}
+            key={suggestion}
+            onClick={() => void ask(suggestion)}
+            type="button"
+          >
             {suggestion}
           </button>
         ))}
@@ -96,17 +144,24 @@ export function FinanceAssistant({
         </label>
         <input
           autoComplete="off"
+          disabled={pending}
           id="finance-question"
           onChange={(event) => setQuestion(event.target.value)}
           placeholder="Pergunte sobre seus gastos…"
           value={question}
         />
-        <button aria-label="Enviar pergunta" type="submit">
+        <button
+          aria-label="Enviar pergunta"
+          disabled={pending}
+          type="submit"
+        >
           <span aria-hidden="true">↗</span>
         </button>
       </form>
       <p className={styles.assistantNote}>
-        Respostas privadas, calculadas a partir dos seus lançamentos.
+        {assistantMode === "online"
+          ? "IA configurada · resposta gerada com seus dados deste mês."
+          : "Modo local · análises privadas sem custo de API."}
       </p>
     </section>
   );

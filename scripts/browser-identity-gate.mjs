@@ -519,6 +519,7 @@ async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
       { tag: "A", text: "Metas" },
       { tag: "A", text: "Notas" },
       { tag: "A", text: "Assistente" },
+      { tag: "A", text: "Configurações" },
       { tag: "BUTTON", text: "Sair" },
       { tag: "BUTTON", text: "Adicionar" },
       { id: "quick-capture", tag: "INPUT" },

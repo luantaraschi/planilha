@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { importStatement, type FinanceActionState } from "./finance-actions";
-import { parseBankStatementCsv } from "./finance-model";
+import { parseBankStatement } from "./finance-model";
 import styles from "./finance-dashboard.module.css";
 
 const initialState: FinanceActionState = { status: "idle", message: "" };
@@ -35,7 +35,7 @@ export function StatementImporter() {
     }
 
     try {
-      const parsed = parseBankStatementCsv(await file.text());
+      const parsed = parseBankStatement(await file.text(), file.name);
       setPreview({
         names: parsed.rows.slice(0, 3).map((row) => row.description),
         rows: parsed.rows.length,
@@ -60,11 +60,11 @@ export function StatementImporter() {
           <span />
         </span>
         <span>
-          <strong>Escolha o CSV do seu banco</strong>
-          <small>Data, descrição e valor · até 1 MB</small>
+          <strong>Escolha o extrato do seu banco</strong>
+          <small>CSV ou OFX · até 1 MB</small>
         </span>
         <input
-          accept=".csv,text/csv"
+          accept=".csv,.ofx,text/csv,application/x-ofx"
           name="statement"
           onChange={(event) => previewFile(event.target.files?.[0])}
           required

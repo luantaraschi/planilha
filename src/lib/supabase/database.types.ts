@@ -34,6 +34,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_agent_settings: {
+        Row: {
+          api_key_auth_tag: string | null
+          api_key_hint: string | null
+          api_key_iv: string | null
+          created_at: string
+          enabled: boolean
+          encrypted_api_key: string | null
+          instructions: string
+          model: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key_auth_tag?: string | null
+          api_key_hint?: string | null
+          api_key_iv?: string | null
+          created_at?: string
+          enabled?: boolean
+          encrypted_api_key?: string | null
+          instructions?: string
+          model?: string
+          provider?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key_auth_tag?: string | null
+          api_key_hint?: string | null
+          api_key_iv?: string | null
+          created_at?: string
+          enabled?: boolean
+          encrypted_api_key?: string | null
+          instructions?: string
+          model?: string
+          provider?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_events: {
         Row: {
           action: string
