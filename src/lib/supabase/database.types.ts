@@ -112,6 +112,44 @@ export type Database = {
         }
         Relationships: []
       }
+      budgets: {
+        Row: {
+          amount_cents: number
+          category_id: string | null
+          created_at: string
+          id: string
+          month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          month: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          month?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_category_id_user_id_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           active: boolean
@@ -159,6 +197,215 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      financial_accounts: {
+        Row: {
+          account_type: string
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          opening_balance_cents: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_type: string
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          opening_balance_cents?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_type?: string
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          opening_balance_cents?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_categories: {
+        Row: {
+          active: boolean
+          category_type: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          category_type: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          category_type?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_goals: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          saved_cents: number
+          status: string
+          target_cents: number
+          target_on: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          saved_cents?: number
+          status?: string
+          target_cents: number
+          target_on?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          saved_cents?: number
+          status?: string
+          target_cents?: number
+          target_on?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      import_batch_rows: {
+        Row: {
+          batch_id: string
+          created_at: string
+          description: string
+          id: string
+          import_fingerprint: string
+          occurred_on: string | null
+          review_status: string
+          row_number: number
+          signed_amount_cents: number
+          transaction_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          description: string
+          id?: string
+          import_fingerprint: string
+          occurred_on?: string | null
+          review_status: string
+          row_number: number
+          signed_amount_cents: number
+          transaction_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          import_fingerprint?: string
+          occurred_on?: string | null
+          review_status?: string
+          row_number?: number
+          signed_amount_cents?: number
+          transaction_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batch_rows_batch_id_user_id_fkey"
+            columns: ["batch_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "import_batch_rows_transaction_id_user_id_fkey"
+            columns: ["transaction_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      import_batches: {
+        Row: {
+          account_id: string
+          created_at: string
+          duplicate_count: number
+          file_name: string
+          file_type: string
+          id: string
+          imported_count: number
+          row_count: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          duplicate_count?: number
+          file_name: string
+          file_type: string
+          id?: string
+          imported_count?: number
+          row_count?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          duplicate_count?: number
+          file_name?: string
+          file_type?: string
+          id?: string
+          imported_count?: number
+          row_count?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_account_id_user_id_fkey"
+            columns: ["account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
       }
       preferences: {
         Row: {
@@ -222,6 +469,152 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recurring_entries: {
+        Row: {
+          account_id: string
+          active: boolean
+          amount_cents: number
+          category_id: string | null
+          created_at: string
+          description: string
+          frequency: string
+          id: string
+          next_due_on: string
+          transaction_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          amount_cents: number
+          category_id?: string | null
+          created_at?: string
+          description: string
+          frequency: string
+          id?: string
+          next_due_on: string
+          transaction_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          amount_cents?: number
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          frequency?: string
+          id?: string
+          next_due_on?: string
+          transaction_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_entries_account_id_user_id_fkey"
+            columns: ["account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "recurring_entries_category_id_user_id_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          account_id: string
+          amount_cents: number
+          category_id: string | null
+          created_at: string
+          description: string
+          due_on: string | null
+          id: string
+          import_batch_id: string | null
+          import_fingerprint: string | null
+          occurred_on: string
+          source: string
+          status: string
+          transaction_type: string
+          transfer_account_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount_cents: number
+          category_id?: string | null
+          created_at?: string
+          description: string
+          due_on?: string | null
+          id?: string
+          import_batch_id?: string | null
+          import_fingerprint?: string | null
+          occurred_on: string
+          source?: string
+          status: string
+          transaction_type: string
+          transfer_account_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number
+          category_id?: string | null
+          created_at?: string
+          description?: string
+          due_on?: string | null
+          id?: string
+          import_batch_id?: string | null
+          import_fingerprint?: string | null
+          occurred_on?: string
+          source?: string
+          status?: string
+          transaction_type?: string
+          transfer_account_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_user_id_fkey"
+            columns: ["account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "transactions_category_id_user_id_fkey"
+            columns: ["category_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "transactions_import_batch_id_user_id_fkey"
+            columns: ["import_batch_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "transactions_transfer_account_id_user_id_fkey"
+            columns: ["transfer_account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
       }
     }
     Views: {

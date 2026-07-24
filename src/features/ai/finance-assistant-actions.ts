@@ -2,9 +2,9 @@
 
 import {
   answerFinanceQuestion,
-  buildFinanceSnapshot,
+  buildFinanceWorkspace,
 } from "@/features/finance/finance-model";
-import { listCurrentExpenses } from "@/features/finance/finance-repository";
+import { getCurrentFinanceLedger } from "@/features/finance/finance-repository";
 import { getCurrentAiRuntimeSettings } from "./ai-settings-repository";
 import { requestOpenAiFinanceAnswer } from "./openai-finance";
 
@@ -39,11 +39,11 @@ export async function askFinanceAssistant(
     };
   }
 
-  const snapshot = buildFinanceSnapshot(
-    await listCurrentExpenses(),
+  const workspace = buildFinanceWorkspace(
+    await getCurrentFinanceLedger(),
     todayInProductTimeZone(),
   );
-  const localAnswer = answerFinanceQuestion(normalizedQuestion, snapshot);
+  const localAnswer = answerFinanceQuestion(normalizedQuestion, workspace);
 
   let settings;
   try {
@@ -65,7 +65,7 @@ export async function askFinanceAssistant(
       answer: await requestOpenAiFinanceAnswer({
         ...settings,
         question: normalizedQuestion,
-        snapshot,
+        workspace,
       }),
       mode: "online",
       notice: "",

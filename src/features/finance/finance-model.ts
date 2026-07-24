@@ -1,65 +1,122 @@
-export const expenseCategories = [
-  "Moradia",
-  "Alimentação",
-  "Transporte",
-  "Saúde",
-  "Educação",
-  "Lazer",
-  "Assinaturas",
-  "Outros",
-] as const;
+export type AccountType = "checking" | "cash" | "savings" | "credit";
+export type TransactionType =
+  | "income"
+  | "expense"
+  | "transfer"
+  | "adjustment";
+export type TransactionStatus = "planned" | "cleared" | "ignored";
+export type TransactionSource = "manual" | "bank_import" | "legacy";
 
-export type ExpenseType = "fixed" | "variable";
-export type ExpenseSource = "manual" | "bank_import";
-
-export type Expense = {
+export type FinancialAccount = {
   id: string;
-  expenseType: ExpenseType;
-  description: string;
-  category: string;
-  amount: number;
-  expenseDate: string;
-  dueDay: number | null;
-  source: ExpenseSource;
+  name: string;
+  accountType: AccountType;
+  openingBalanceCents: number;
   active: boolean;
 };
 
-export type ExpenseInput = Omit<
-  Expense,
-  "id" | "source" | "active"
->;
-
-export type FinanceSnapshot = {
-  fixedTotal: number;
-  variableTotal: number;
-  monthTotal: number;
-  topCategory: string | null;
-  topCategoryTotal: number;
-  visibleExpenses: Expense[];
+export type FinancialCategory = {
+  id: string;
+  name: string;
+  categoryType: "income" | "expense";
+  active: boolean;
 };
 
-type NormalizedExpense =
-  | { ok: true; value: ExpenseInput }
-  | { ok: false; message: string };
+export type FinancialTransaction = {
+  id: string;
+  accountId: string;
+  transactionType: TransactionType;
+  amountCents: number;
+  occurredOn: string;
+  dueOn: string | null;
+  status: TransactionStatus;
+  description: string;
+  categoryId: string | null;
+  categoryName: string | null;
+  transferAccountId: string | null;
+  source: TransactionSource;
+};
+
+export type RecurringEntry = {
+  id: string;
+  accountId: string;
+  transactionType: "income" | "expense";
+  amountCents: number;
+  description: string;
+  categoryId: string | null;
+  frequency: "weekly" | "monthly" | "yearly";
+  nextDueOn: string;
+  active: boolean;
+};
+
+export type Budget = {
+  id: string;
+  categoryId: string | null;
+  month: string;
+  amountCents: number;
+};
+
+export type FinancialGoal = {
+  id: string;
+  name: string;
+  targetCents: number;
+  savedCents: number;
+  targetOn: string | null;
+  status: "active" | "completed" | "paused";
+};
+
+export type FinanceLedger = {
+  accounts: FinancialAccount[];
+  categories: FinancialCategory[];
+  transactions: FinancialTransaction[];
+  recurringEntries: RecurringEntry[];
+  budgets: Budget[];
+  goals: FinancialGoal[];
+};
+
+export type MonthlyFinanceSummary = {
+  incomeCents: number;
+  expenseCents: number;
+  resultCents: number;
+  projectedEndBalanceCents: number;
+  freePerDayCents: number | null;
+  confidence: "complete" | "partial";
+  missingInputs: string[];
+  budgetRemainingCents: number | null;
+  forecastIncomeCents: number;
+  forecastExpenseCents: number;
+};
+
+export type FinanceWorkspace = FinanceLedger & {
+  selectedAccountId: string | null;
+  summary: MonthlyFinanceSummary;
+};
+
+export type TransactionInput = Omit<
+  FinancialTransaction,
+  "id" | "categoryName" | "source"
+>;
+
+export type StatementRow = {
+  rowNumber: number;
+  description: string;
+  amountCents: number;
+  occurredOn: string;
+  transactionType: "income" | "expense";
+  externalId: string | null;
+};
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
 
-export function formatFinanceCurrency(value: number) {
-  return currencyFormatter.format(value);
-}
-
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function numberFromLocalizedValue(value: string) {
-  const cleaned = value.replace(/[R$\s]/g, "");
-  const normalized =
-    cleaned.includes(",") && cleaned.includes(".")
-      ? cleaned.replace(/\./g, "").replace(",", ".")
-      : cleaned.replace(",", ".");
-  return Number(normalized);
+export function formatFinanceCurrency(cents: number) {
+  return currencyFormatter.format(cents / 100);
 }
 
 function isValidIsoDate(value: string) {
@@ -69,99 +126,262 @@ function isValidIsoDate(value: string) {
     parsed.toISOString().slice(0, 10) === value;
 }
 
-export function normalizeExpenseInput(formData: FormData): NormalizedExpense {
-  const expenseType = String(formData.get("expenseType") ?? "");
-  const description = String(formData.get("description") ?? "").trim();
-  const category = String(formData.get("category") ?? "");
-  const amount = numberFromLocalizedValue(
-    String(formData.get("amount") ?? ""),
-  );
-  const expenseDate = String(formData.get("expenseDate") ?? "");
-  const dueDayValue = Number(formData.get("dueDay"));
-
-  if (expenseType !== "fixed" && expenseType !== "variable") {
-    return { ok: false, message: "Escolha o tipo de despesa." };
-  }
-  if (!description || description.length > 120) {
-    return { ok: false, message: "Informe uma descrição de até 120 caracteres." };
-  }
-  if (!expenseCategories.includes(category as (typeof expenseCategories)[number])) {
-    return { ok: false, message: "Escolha uma categoria válida." };
-  }
-  if (!Number.isFinite(amount) || amount <= 0 || amount > 9_999_999_999.99) {
-    return { ok: false, message: "Informe um valor maior que zero." };
-  }
-  if (!isValidIsoDate(expenseDate)) {
-    return { ok: false, message: "Informe uma data válida." };
-  }
-  if (
-    expenseType === "fixed" &&
-    (!Number.isInteger(dueDayValue) || dueDayValue < 1 || dueDayValue > 31)
-  ) {
-    return { ok: false, message: "Informe um dia de vencimento entre 1 e 31." };
-  }
-
-  return {
-    ok: true,
-    value: {
-      expenseType,
-      description,
-      category,
-      amount: Math.round(amount * 100) / 100,
-      expenseDate,
-      dueDay: expenseType === "fixed" ? dueDayValue : null,
-    },
-  };
+function centsFromLocalizedValue(value: string) {
+  const cleaned = value.replace(/[R$\s]/g, "");
+  const normalized =
+    cleaned.includes(",") && cleaned.includes(".")
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned.replace(",", ".");
+  const amount = Number(normalized);
+  return Number.isFinite(amount) ? Math.round(amount * 100) : Number.NaN;
 }
 
-export function buildFinanceSnapshot(
-  expenses: Expense[],
-  currentDate: string,
-): FinanceSnapshot {
-  const month = currentDate.slice(0, 7);
-  const visibleExpenses = expenses.filter((expense) =>
-    expense.expenseType === "fixed"
-      ? expense.active
-      : expense.expenseDate.startsWith(month),
-  );
-  let fixedTotal = 0;
-  let variableTotal = 0;
-  const categoryTotals = new Map<string, number>();
-
-  for (const expense of visibleExpenses) {
-    if (expense.expenseType === "fixed") fixedTotal += expense.amount;
-    else variableTotal += expense.amount;
-    categoryTotals.set(
-      expense.category,
-      (categoryTotals.get(expense.category) ?? 0) + expense.amount,
-    );
-  }
-
-  let topCategory: string | null = null;
-  let topCategoryTotal = 0;
-  for (const [category, total] of categoryTotals) {
-    if (total > topCategoryTotal) {
-      topCategory = category;
-      topCategoryTotal = total;
-    }
-  }
-
-  return {
-    fixedTotal,
-    variableTotal,
-    monthTotal: fixedTotal + variableTotal,
-    topCategory,
-    topCategoryTotal,
-    visibleExpenses,
-  };
-}
-
-function normalizeHeader(value: string) {
+function normalizeText(value: string) {
   return value
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .trim()
     .toLowerCase();
+}
+
+export function normalizeTransactionInput(
+  formData: FormData,
+):
+  | { ok: true; value: TransactionInput }
+  | { ok: false; message: string } {
+  const accountId = String(formData.get("accountId") ?? "");
+  const transactionType = String(formData.get("transactionType") ?? "");
+  const description = String(formData.get("description") ?? "").trim();
+  const categoryId = String(formData.get("categoryId") ?? "") || null;
+  const amountCents = centsFromLocalizedValue(
+    String(formData.get("amount") ?? ""),
+  );
+  const occurredOn = String(formData.get("occurredOn") ?? "");
+  const dueOn = String(formData.get("dueOn") ?? "") || null;
+  const status = String(formData.get("status") ?? "");
+  const transferAccountId =
+    String(formData.get("transferAccountId") ?? "") || null;
+
+  if (!uuidPattern.test(accountId)) {
+    return { ok: false, message: "Escolha uma conta válida." };
+  }
+  if (
+    transactionType !== "income" &&
+    transactionType !== "expense" &&
+    transactionType !== "transfer" &&
+    transactionType !== "adjustment"
+  ) {
+    return { ok: false, message: "Escolha um tipo de lançamento válido." };
+  }
+  if (!description || description.length > 120) {
+    return {
+      ok: false,
+      message: "Informe uma descrição de até 120 caracteres.",
+    };
+  }
+  if (
+    !Number.isSafeInteger(amountCents) ||
+    amountCents <= 0 ||
+    amountCents > 999_999_999_999
+  ) {
+    return { ok: false, message: "Informe um valor maior que zero." };
+  }
+  if (!isValidIsoDate(occurredOn) || (dueOn && !isValidIsoDate(dueOn))) {
+    return { ok: false, message: "Informe uma data válida." };
+  }
+  if (status !== "planned" && status !== "cleared") {
+    return { ok: false, message: "Escolha um estado válido." };
+  }
+  if (
+    (transactionType === "income" || transactionType === "expense") &&
+    (!categoryId || !uuidPattern.test(categoryId))
+  ) {
+    return { ok: false, message: "Escolha uma categoria válida." };
+  }
+  if (
+    transactionType === "transfer" &&
+    (!transferAccountId ||
+      !uuidPattern.test(transferAccountId) ||
+      transferAccountId === accountId)
+  ) {
+    return {
+      ok: false,
+      message: "Escolha uma conta de destino diferente.",
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      accountId,
+      transactionType,
+      description,
+      categoryId:
+        transactionType === "income" || transactionType === "expense"
+          ? categoryId
+          : null,
+      amountCents,
+      occurredOn,
+      dueOn,
+      status,
+      transferAccountId:
+        transactionType === "transfer" ? transferAccountId : null,
+    },
+  };
+}
+
+function monthEnd(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber, 0))
+    .toISOString()
+    .slice(0, 10);
+}
+
+export function buildMonthlyFinanceSummary(
+  ledger: FinanceLedger,
+  currentDate: string,
+  selectedAccountId: string | null = null,
+): MonthlyFinanceSummary {
+  const month = currentDate.slice(0, 7);
+  const end = monthEnd(month);
+  const selectedAccounts = ledger.accounts.filter(
+    (account) =>
+      account.active &&
+      (!selectedAccountId || account.id === selectedAccountId),
+  );
+  const selectedIds = new Set(selectedAccounts.map((account) => account.id));
+  const inScope = (accountId: string) =>
+    !selectedAccountId || selectedIds.has(accountId);
+
+  const monthTransactions = ledger.transactions.filter(
+    (transaction) =>
+      transaction.status !== "ignored" &&
+      transaction.occurredOn.startsWith(month) &&
+      (inScope(transaction.accountId) ||
+        (transaction.transferAccountId
+          ? inScope(transaction.transferAccountId)
+          : false)),
+  );
+  let incomeCents = 0;
+  let expenseCents = 0;
+  for (const transaction of monthTransactions) {
+    if (transaction.transactionType === "income") {
+      incomeCents += transaction.amountCents;
+    } else if (transaction.transactionType === "expense") {
+      expenseCents += transaction.amountCents;
+    }
+  }
+
+  let projectedEndBalanceCents = selectedAccounts.reduce(
+    (total, account) => total + account.openingBalanceCents,
+    0,
+  );
+  for (const transaction of ledger.transactions) {
+    if (transaction.status === "ignored" || transaction.occurredOn > end) {
+      continue;
+    }
+    if (
+      transaction.transactionType === "income" &&
+      inScope(transaction.accountId)
+    ) {
+      projectedEndBalanceCents += transaction.amountCents;
+    } else if (
+      transaction.transactionType === "expense" &&
+      inScope(transaction.accountId)
+    ) {
+      projectedEndBalanceCents -= transaction.amountCents;
+    } else if (
+      transaction.transactionType === "adjustment" &&
+      inScope(transaction.accountId)
+    ) {
+      projectedEndBalanceCents += transaction.amountCents;
+    } else if (transaction.transactionType === "transfer") {
+      if (inScope(transaction.accountId)) {
+        projectedEndBalanceCents -= transaction.amountCents;
+      }
+      if (
+        transaction.transferAccountId &&
+        inScope(transaction.transferAccountId)
+      ) {
+        projectedEndBalanceCents += transaction.amountCents;
+      }
+    }
+  }
+
+  let forecastIncomeCents = 0;
+  let forecastExpenseCents = 0;
+  for (const entry of ledger.recurringEntries) {
+    if (
+      !entry.active ||
+      !inScope(entry.accountId) ||
+      !entry.nextDueOn.startsWith(month) ||
+      entry.nextDueOn < currentDate
+    ) {
+      continue;
+    }
+    if (entry.transactionType === "income") {
+      forecastIncomeCents += entry.amountCents;
+      projectedEndBalanceCents += entry.amountCents;
+    } else {
+      forecastExpenseCents += entry.amountCents;
+      projectedEndBalanceCents -= entry.amountCents;
+    }
+  }
+
+  const budgetTotal = ledger.budgets
+    .filter((budget) => budget.month.startsWith(month))
+    .reduce((total, budget) => total + budget.amountCents, 0);
+  const budgetRemainingCents =
+    budgetTotal > 0 ? budgetTotal - expenseCents : null;
+  const remainingDays =
+    Math.floor(
+      (Date.parse(`${end}T00:00:00Z`) -
+        Date.parse(`${currentDate}T00:00:00Z`)) /
+        86_400_000,
+    ) + 1;
+
+  const missingInputs: string[] = [];
+  if (ledger.accounts.length === 0) {
+    missingInputs.push("Cadastre o saldo inicial de pelo menos uma conta.");
+  }
+  if (budgetRemainingCents === null) {
+    missingInputs.push(
+      "Defina um orçamento mensal para calcular o valor livre por dia.",
+    );
+  }
+  if (ledger.recurringEntries.length === 0) {
+    missingInputs.push(
+      "Cadastre entradas e contas recorrentes para completar a previsão.",
+    );
+  }
+
+  return {
+    incomeCents,
+    expenseCents,
+    resultCents: incomeCents - expenseCents,
+    projectedEndBalanceCents,
+    freePerDayCents:
+      budgetRemainingCents === null || remainingDays <= 0
+        ? null
+        : Math.floor(budgetRemainingCents / remainingDays),
+    confidence: missingInputs.length === 0 ? "complete" : "partial",
+    missingInputs,
+    budgetRemainingCents,
+    forecastIncomeCents,
+    forecastExpenseCents,
+  };
+}
+
+export function buildFinanceWorkspace(
+  ledger: FinanceLedger,
+  currentDate: string,
+  selectedAccountId: string | null = null,
+): FinanceWorkspace {
+  return {
+    ...ledger,
+    selectedAccountId,
+    summary: buildMonthlyFinanceSummary(ledger, currentDate, selectedAccountId),
+  };
 }
 
 function parseCsvLine(line: string, delimiter: string) {
@@ -197,15 +417,26 @@ function statementDate(value: string) {
   return isValidIsoDate(normalized) ? normalized : null;
 }
 
+function statementType(value: string, amountCents: number) {
+  const normalized = normalizeText(value);
+  if (/credito|entrada|recebimento|deposito|salario/.test(normalized)) {
+    return "income" as const;
+  }
+  if (/debito|saida|compra|pagamento|tarifa/.test(normalized)) {
+    return "expense" as const;
+  }
+  return amountCents < 0 ? ("expense" as const) : ("income" as const);
+}
+
 export function parseBankStatementCsv(text: string) {
   const lines = text
     .replace(/^\uFEFF/, "")
     .split(/\r?\n/)
     .filter((line) => line.trim());
-  if (lines.length < 2) return { rows: [], skipped: 0 };
+  if (lines.length < 2) return { rows: [] as StatementRow[], skipped: 0 };
 
   const delimiter = lines[0].includes(";") ? ";" : ",";
-  const headers = parseCsvLine(lines[0], delimiter).map(normalizeHeader);
+  const headers = parseCsvLine(lines[0], delimiter).map(normalizeText);
   const findHeader = (...names: string[]) =>
     headers.findIndex((header) => names.includes(header));
   const dateIndex = findHeader("data", "date");
@@ -217,41 +448,44 @@ export function parseBankStatementCsv(text: string) {
   );
   const amountIndex = findHeader("valor", "amount");
   const typeIndex = findHeader("tipo", "type");
+  const idIndex = findHeader("id", "fitid", "identificador");
 
   if (dateIndex < 0 || descriptionIndex < 0 || amountIndex < 0) {
     throw new Error("O CSV precisa ter colunas de data, descrição e valor.");
   }
 
-  const rows: Array<{
-    description: string;
-    amount: number;
-    expenseDate: string;
-    category: "Outros";
-  }> = [];
+  const rows: StatementRow[] = [];
   let skipped = 0;
-
-  for (const line of lines.slice(1)) {
+  lines.slice(1).forEach((line, index) => {
     const cells = parseCsvLine(line, delimiter);
-    const date = statementDate(cells[dateIndex] ?? "");
+    const occurredOn = statementDate(cells[dateIndex] ?? "");
     const description = (cells[descriptionIndex] ?? "").trim();
-    const amount = numberFromLocalizedValue(cells[amountIndex] ?? "");
-    const statementType = normalizeHeader(cells[typeIndex] ?? "");
-    const isCredit = /credito|entrada|recebimento/.test(statementType) ||
-      (!statementType && amount > 0);
-    const isDebit = /debito|saida|compra/.test(statementType) || amount < 0;
-
-    if (!date || !description || !Number.isFinite(amount) || !isDebit || isCredit) {
+    const signedAmountCents = centsFromLocalizedValue(
+      cells[amountIndex] ?? "",
+    );
+    if (
+      !occurredOn ||
+      !description ||
+      !Number.isSafeInteger(signedAmountCents) ||
+      signedAmountCents === 0
+    ) {
       skipped += 1;
-      continue;
+      return;
     }
 
     rows.push({
+      rowNumber: index + 2,
       description: description.slice(0, 120),
-      amount: Math.round(Math.abs(amount) * 100) / 100,
-      expenseDate: date,
-      category: "Outros",
+      amountCents: Math.abs(signedAmountCents),
+      occurredOn,
+      transactionType: statementType(
+        typeIndex >= 0 ? cells[typeIndex] ?? "" : "",
+        signedAmountCents,
+      ),
+      externalId:
+        idIndex >= 0 ? (cells[idIndex] ?? "").trim() || null : null,
     });
-  }
+  });
 
   return { rows, skipped };
 }
@@ -278,50 +512,46 @@ export function parseBankStatementOfx(text: string) {
       /<STMTTRN\b[^>]*>([\s\S]*?)(?:<\/STMTTRN>|(?=<STMTTRN\b|<\/BANKTRANLIST>|<\/OFX>))/gi,
     ),
   ];
-  const rows: Array<{
-    description: string;
-    amount: number;
-    expenseDate: string;
-    category: "Outros";
-  }> = [];
+  const rows: StatementRow[] = [];
   let skipped = 0;
 
-  for (const match of transactions) {
+  transactions.forEach((match, index) => {
     const transaction = match[1];
-    const rawDate = ofxField(transaction, "DTPOSTED");
-    const dateDigits = rawDate.replace(/\D/g, "").slice(0, 8);
-    const expenseDate = dateDigits.length === 8
-      ? `${dateDigits.slice(0, 4)}-${dateDigits.slice(4, 6)}-${dateDigits.slice(6, 8)}`
-      : "";
-    const amount = Number(ofxField(transaction, "TRNAMT").replace(",", "."));
-    const transactionType = normalizeHeader(ofxField(transaction, "TRNTYPE"));
+    const dateDigits = ofxField(transaction, "DTPOSTED")
+      .replace(/\D/g, "")
+      .slice(0, 8);
+    const occurredOn =
+      dateDigits.length === 8
+        ? `${dateDigits.slice(0, 4)}-${dateDigits.slice(4, 6)}-${dateDigits.slice(6, 8)}`
+        : "";
+    const signedAmountCents = centsFromLocalizedValue(
+      ofxField(transaction, "TRNAMT"),
+    );
     const description = decodeOfxText(
       ofxField(transaction, "NAME") || ofxField(transaction, "MEMO"),
     );
-    const isCredit =
-      amount > 0 || /credit|dep|directdep|interest/.test(transactionType);
-    const isDebit =
-      amount < 0 ||
-      /debit|check|payment|fee|cash|directdebit/.test(transactionType);
-
     if (
-      !isValidIsoDate(expenseDate) ||
+      !isValidIsoDate(occurredOn) ||
       !description ||
-      !Number.isFinite(amount) ||
-      !isDebit ||
-      isCredit
+      !Number.isSafeInteger(signedAmountCents) ||
+      signedAmountCents === 0
     ) {
       skipped += 1;
-      continue;
+      return;
     }
 
     rows.push({
+      rowNumber: index + 1,
       description: description.slice(0, 120),
-      amount: Math.round(Math.abs(amount) * 100) / 100,
-      expenseDate,
-      category: "Outros",
+      amountCents: Math.abs(signedAmountCents),
+      occurredOn,
+      transactionType: statementType(
+        ofxField(transaction, "TRNTYPE"),
+        signedAmountCents,
+      ),
+      externalId: ofxField(transaction, "FITID") || null,
     });
-  }
+  });
 
   return { rows, skipped };
 }
@@ -335,28 +565,29 @@ export function parseBankStatement(text: string, fileName: string) {
 
 export function answerFinanceQuestion(
   question: string,
-  snapshot: FinanceSnapshot,
+  workspace: FinanceWorkspace,
 ) {
-  if (snapshot.monthTotal === 0) {
-    return "Ainda não há despesas neste mês. Adicione um gasto ou importe um extrato para começarmos.";
+  const { summary } = workspace;
+  if (summary.incomeCents === 0 && summary.expenseCents === 0) {
+    return "Ainda não há lançamentos neste mês. Adicione um item ou importe um extrato para começar.";
   }
 
-  const normalized = normalizeHeader(question);
-  if (
-    /categoria|\bpesa\b|maior gasto/.test(normalized) &&
-    snapshot.topCategory
-  ) {
-    return `${snapshot.topCategory} é a categoria que mais pesa neste mês, com ${formatFinanceCurrency(snapshot.topCategoryTotal)}.`;
+  const normalized = normalizeText(question);
+  if (/receita|entrada|ganh/.test(normalized)) {
+    return `As entradas do mês somam ${formatFinanceCurrency(summary.incomeCents)}.`;
   }
-  if (/fixo|fixa/.test(normalized)) {
-    const share = Math.round(
-      (snapshot.fixedTotal / snapshot.monthTotal) * 100,
-    );
-    return `Seus gastos fixos somam ${formatFinanceCurrency(snapshot.fixedTotal)} e representam ${share}% das despesas do mês.`;
+  if (/previs|saldo/.test(normalized)) {
+    const caveat =
+      summary.confidence === "partial"
+        ? ` A previsão é parcial: ${summary.missingInputs.join(" ")}`
+        : "";
+    return `O saldo projetado ao fim do mês é ${formatFinanceCurrency(summary.projectedEndBalanceCents)}.${caveat}`;
   }
-  if (/variavel|economizar|dica/.test(normalized)) {
-    return `As despesas variáveis estão em ${formatFinanceCurrency(snapshot.variableTotal)}. Comece revisando ${snapshot.topCategory ?? "a maior categoria"} antes de cortar itens essenciais.`;
+  if (/economizar|orcamento|livre/.test(normalized)) {
+    return summary.freePerDayCents === null
+      ? "Defina um orçamento mensal para eu calcular quanto está livre por dia."
+      : `O orçamento deixa ${formatFinanceCurrency(summary.freePerDayCents)} livres por dia até o fim do mês.`;
   }
 
-  return `Neste mês você registrou ${formatFinanceCurrency(snapshot.monthTotal)} em despesas: ${formatFinanceCurrency(snapshot.fixedTotal)} fixas e ${formatFinanceCurrency(snapshot.variableTotal)} variáveis.`;
+  return `Neste mês, entraram ${formatFinanceCurrency(summary.incomeCents)} e saíram ${formatFinanceCurrency(summary.expenseCents)}, com resultado de ${formatFinanceCurrency(summary.resultCents)}.`;
 }

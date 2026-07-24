@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { FinanceSnapshot } from "./finance-model";
+import type { FinanceWorkspace } from "./finance-model";
 
 const mocks = vi.hoisted(() => ({
   askFinanceAssistant: vi.fn(),
@@ -13,13 +13,26 @@ vi.mock("@/features/ai/finance-assistant-actions", () => ({
 
 import { FinanceAssistant } from "./finance-assistant";
 
-const snapshot: FinanceSnapshot = {
-  fixedTotal: 2_400,
-  variableTotal: 600,
-  monthTotal: 3_000,
-  topCategory: "Moradia",
-  topCategoryTotal: 1_800,
-  visibleExpenses: [],
+const workspace: FinanceWorkspace = {
+  accounts: [],
+  categories: [],
+  transactions: [],
+  recurringEntries: [],
+  budgets: [],
+  goals: [],
+  selectedAccountId: null,
+  summary: {
+    incomeCents: 500_000,
+    expenseCents: 300_000,
+    resultCents: 200_000,
+    projectedEndBalanceCents: 200_000,
+    freePerDayCents: null,
+    confidence: "partial",
+    missingInputs: [],
+    budgetRemainingCents: null,
+    forecastIncomeCents: 0,
+    forecastExpenseCents: 0,
+  },
 };
 
 describe("FinanceAssistant", () => {
@@ -31,7 +44,7 @@ describe("FinanceAssistant", () => {
       notice: "",
     });
     const user = userEvent.setup();
-    render(<FinanceAssistant snapshot={snapshot} />);
+    render(<FinanceAssistant workspace={workspace} />);
 
     await user.type(
       screen.getByRole("textbox", { name: "Pergunte sobre suas finanças" }),

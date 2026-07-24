@@ -8,7 +8,7 @@ import {
 } from "@/features/ai/finance-assistant-actions";
 import {
   answerFinanceQuestion,
-  type FinanceSnapshot,
+  type FinanceWorkspace,
 } from "./finance-model";
 import styles from "./finance-dashboard.module.css";
 
@@ -19,15 +19,15 @@ type Message = {
 };
 
 const suggestions = [
-  "Quanto gasto com despesas fixas?",
-  "Qual categoria pesa mais?",
-  "Onde posso economizar?",
+  "Como está o resultado do mês?",
+  "Qual é o saldo projetado?",
+  "Quanto está livre por dia?",
 ];
 
 export function FinanceAssistant({
-  snapshot,
+  workspace,
 }: {
-  snapshot: FinanceSnapshot;
+  workspace: FinanceWorkspace;
 }) {
   const [question, setQuestion] = useState("");
   const [pending, setPending] = useState(false);
@@ -40,9 +40,10 @@ export function FinanceAssistant({
       id: 1,
       author: "assistant",
       text:
-        snapshot.monthTotal > 0
+        workspace.summary.incomeCents > 0 ||
+        workspace.summary.expenseCents > 0
           ? "Já li seus lançamentos deste mês. O que você quer entender?"
-          : "Adicione uma despesa ou importe um extrato e eu ajudo a interpretar.",
+          : "Adicione um lançamento ou importe um extrato e eu ajudo a interpretar.",
     },
   ]);
 
@@ -64,7 +65,7 @@ export function FinanceAssistant({
       result = await askFinanceAssistant(trimmed);
     } catch {
       result = {
-        answer: answerFinanceQuestion(trimmed, snapshot),
+        answer: answerFinanceQuestion(trimmed, workspace),
         mode: "local",
         notice: "A conexão falhou; usei a análise local.",
       };
@@ -74,11 +75,7 @@ export function FinanceAssistant({
     nextMessageId.current += 1;
     setMessages((current) => [
       ...current,
-      {
-        id: assistantMessageId,
-        author: "assistant",
-        text: result.answer,
-      },
+      { id: assistantMessageId, author: "assistant", text: result.answer },
     ]);
     setAssistantMode(result.mode);
     setNotice(result.notice);
@@ -101,14 +98,18 @@ export function FinanceAssistant({
           <GardenIcon name="assistant" size={25} />
         </span>
         <div>
-          <p className={styles.kicker}>Seu copiloto</p>
+          <p>Leitura assistida</p>
           <h2 id="assistant-title">Conversa financeira</h2>
         </div>
       </header>
 
       <div aria-live="polite" className={styles.messages}>
         {messages.map((message) => (
-          <p className={styles.message} data-author={message.author} key={message.id}>
+          <p
+            className={styles.message}
+            data-author={message.author}
+            key={message.id}
+          >
             {message.text}
           </p>
         ))}
@@ -147,7 +148,7 @@ export function FinanceAssistant({
           disabled={pending}
           id="finance-question"
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="Pergunte sobre seus gastos…"
+          placeholder="Pergunte sobre seu mês…"
           value={question}
         />
         <button

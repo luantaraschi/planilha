@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  addCurrentExpense,
-  deleteCurrentExpense,
-  importCurrentExpenses,
+  addCurrentTransaction,
+  deleteCurrentTransaction,
+  importCurrentTransactions,
 } from "./finance-repository";
 import {
-  normalizeExpenseInput,
+  normalizeTransactionInput,
   parseBankStatement,
 } from "./finance-model";
 
@@ -19,32 +19,35 @@ export type FinanceActionState = {
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export async function addExpense(
+export async function addTransaction(
   _previousState: FinanceActionState,
   formData: FormData,
 ): Promise<FinanceActionState> {
-  const normalized = normalizeExpenseInput(formData);
+  const normalized = normalizeTransactionInput(formData);
   if (!normalized.ok) {
     return { status: "error", message: normalized.message };
   }
-
-  if (!(await addCurrentExpense(normalized.value))) {
+  if (!(await addCurrentTransaction(normalized.value))) {
     return {
       status: "error",
-      message: "Não foi possível adicionar a despesa.",
+      message: "Não foi possível adicionar o lançamento.",
     };
   }
 
   revalidatePath("/financas");
-  return { status: "success", message: "Despesa adicionada." };
+  return { status: "success", message: "Lançamento adicionado." };
 }
 
 export async function importStatement(
   _previousState: FinanceActionState,
   formData: FormData,
 ): Promise<FinanceActionState> {
+  const accountId = String(formData.get("accountId") ?? "");
   const file = formData.get("statement");
   const fileName = file instanceof File ? file.name.toLowerCase() : "";
+  if (!uuidPattern.test(accountId)) {
+    return { status: "error", message: "Escolha a conta do extrato." };
+  }
   if (
     !(file instanceof File) ||
     (!fileName.endsWith(".csv") && !fileName.endsWith(".ofx"))
@@ -63,7 +66,7 @@ export async function importStatement(
     if (parsed.rows.length === 0) {
       return {
         status: "error",
-        message: "Nenhuma saída válida foi encontrada no extrato.",
+        message: "Nenhum lançamento válido foi encontrado no extrato.",
       };
     }
     if (parsed.rows.length > 200) {
@@ -73,14 +76,22 @@ export async function importStatement(
       };
     }
 
-    const result = await importCurrentExpenses(parsed.rows);
+    const result = await importCurrentTransactions(
+      accountId,
+      file.name,
+      parsed.rows,
+    );
     revalidatePath("/financas");
-    const duplicateMessage = result.duplicates > 0
-      ? ` ${result.duplicates} duplicado(s) ignorado(s).`
-      : "";
+    const importedLabel =
+      `${result.imported} lançamento${result.imported === 1 ? "" : "s"} ` +
+      `importado${result.imported === 1 ? "" : "s"}.`;
+    const duplicateLabel =
+      result.duplicates > 0
+        ? ` ${result.duplicates} duplicado${result.duplicates === 1 ? "" : "s"} ignorado${result.duplicates === 1 ? "" : "s"}.`
+        : "";
     return {
       status: "success",
-      message: `${result.imported} lançamento${result.imported === 1 ? "" : "s"} importado${result.imported === 1 ? "" : "s"}.${duplicateMessage}`,
+      message: importedLabel + duplicateLabel,
     };
   } catch {
     return {
@@ -90,10 +101,10 @@ export async function importStatement(
   }
 }
 
-export async function deleteExpense(formData: FormData) {
-  const expenseId = String(formData.get("expenseId") ?? "");
-  if (!uuidPattern.test(expenseId)) return;
-  if (await deleteCurrentExpense(expenseId)) {
+export async function deleteTransaction(formData: FormData) {
+  const transactionId = String(formData.get("transactionId") ?? "");
+  if (!uuidPattern.test(transactionId)) return;
+  if (await deleteCurrentTransaction(transactionId)) {
     revalidatePath("/financas");
   }
 }

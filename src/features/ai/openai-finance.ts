@@ -1,4 +1,4 @@
-import type { FinanceSnapshot } from "@/features/finance/finance-model";
+import type { FinanceWorkspace } from "@/features/finance/finance-model";
 
 type Fetcher = (
   input: string | URL | Request,
@@ -10,22 +10,25 @@ type OpenAiFinanceRequest = {
   model: string;
   instructions: string;
   question: string;
-  snapshot: FinanceSnapshot;
+  workspace: FinanceWorkspace;
 };
 
-function financeContext(snapshot: FinanceSnapshot) {
+function financeContext(workspace: FinanceWorkspace) {
   return {
-    fixedTotal: snapshot.fixedTotal,
-    variableTotal: snapshot.variableTotal,
-    monthTotal: snapshot.monthTotal,
-    topCategory: snapshot.topCategory,
-    topCategoryTotal: snapshot.topCategoryTotal,
-    expenses: snapshot.visibleExpenses.slice(0, 100).map((expense) => ({
-      type: expense.expenseType,
-      description: expense.description,
-      category: expense.category,
-      amount: expense.amount,
-      date: expense.expenseDate,
+    summary: workspace.summary,
+    selectedAccountId: workspace.selectedAccountId,
+    accounts: workspace.accounts.map((account) => ({
+      id: account.id,
+      name: account.name,
+      type: account.accountType,
+    })),
+    transactions: workspace.transactions.slice(0, 100).map((transaction) => ({
+      type: transaction.transactionType,
+      description: transaction.description,
+      category: transaction.categoryName,
+      amountCents: transaction.amountCents,
+      date: transaction.occurredOn,
+      status: transaction.status,
     })),
   };
 }
@@ -73,11 +76,11 @@ export async function requestOpenAiFinanceAnswer(
       model: request.model,
       instructions:
         "Você é um assistente financeiro pessoal em português do Brasil. " +
-        "Use apenas os dados fornecidos, seja claro e acolhedor, não invente valores " +
-        "e trate sugestões como educação financeira, não como aconselhamento profissional." +
+        "Use somente os valores em centavos e a confiança fornecidos, não invente precisão, " +
+        "e trate sugestões como educação financeira, não aconselhamento profissional." +
         customInstructions,
       input:
-        `Dados financeiros: ${JSON.stringify(financeContext(request.snapshot))}\n\n` +
+        `Dados financeiros: ${JSON.stringify(financeContext(request.workspace))}\n\n` +
         `Pergunta: ${request.question}`,
       max_output_tokens: 450,
     }),

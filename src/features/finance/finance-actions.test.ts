@@ -1,133 +1,120 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  addCurrentExpense: vi.fn(),
-  deleteCurrentExpense: vi.fn(),
-  importCurrentExpenses: vi.fn(),
+  addCurrentTransaction: vi.fn(),
+  deleteCurrentTransaction: vi.fn(),
+  importCurrentTransactions: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
 vi.mock("./finance-repository", () => ({
-  addCurrentExpense: mocks.addCurrentExpense,
-  deleteCurrentExpense: mocks.deleteCurrentExpense,
-  importCurrentExpenses: mocks.importCurrentExpenses,
+  addCurrentTransaction: mocks.addCurrentTransaction,
+  deleteCurrentTransaction: mocks.deleteCurrentTransaction,
+  importCurrentTransactions: mocks.importCurrentTransactions,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
 import {
-  addExpense,
-  deleteExpense,
+  addTransaction,
+  deleteTransaction,
   importStatement,
 } from "./finance-actions";
 
-const INITIAL_STATE = { status: "idle" as const, message: "" };
+const initialState = { status: "idle" as const, message: "" };
 
-function expenseForm() {
+function transactionForm() {
   const formData = new FormData();
-  formData.set("expenseType", "variable");
+  formData.set("accountId", "10000000-0000-4000-8000-000000000001");
+  formData.set("transactionType", "expense");
   formData.set("description", "Mercado");
-  formData.set("category", "Alimentação");
+  formData.set("categoryId", "20000000-0000-4000-8000-000000000002");
   formData.set("amount", "82,40");
-  formData.set("expenseDate", "2026-07-20");
+  formData.set("occurredOn", "2026-07-20");
+  formData.set("status", "cleared");
   return formData;
 }
 
 describe("finance actions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mocks.addCurrentExpense.mockResolvedValue(true);
-    mocks.deleteCurrentExpense.mockResolvedValue(true);
-    mocks.importCurrentExpenses.mockResolvedValue({
-      imported: 1,
+    mocks.addCurrentTransaction.mockResolvedValue(true);
+    mocks.deleteCurrentTransaction.mockResolvedValue(true);
+    mocks.importCurrentTransactions.mockResolvedValue({
+      imported: 2,
       duplicates: 0,
     });
   });
 
-  it("validates before adding an expense", async () => {
-    const result = await addExpense(INITIAL_STATE, new FormData());
-
-    expect(result.status).toBe("error");
-    expect(mocks.addCurrentExpense).not.toHaveBeenCalled();
-  });
-
-  it("adds a normalized expense and refreshes finances", async () => {
+  it("adds a normalized ledger transaction", async () => {
     await expect(
-      addExpense(INITIAL_STATE, expenseForm()),
+      addTransaction(initialState, transactionForm()),
     ).resolves.toEqual({
       status: "success",
-      message: "Despesa adicionada.",
+      message: "Lançamento adicionado.",
     });
-    expect(mocks.addCurrentExpense).toHaveBeenCalledWith(
-      expect.objectContaining({ amount: 82.4 }),
+    expect(mocks.addCurrentTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ amountCents: 8_240 }),
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/financas");
   });
 
-  it("imports debit rows from a CSV file", async () => {
+  it("imports reviewed CSV credits and debits into the selected account", async () => {
     const formData = new FormData();
-    const file = new File(
-      ["data;descricao;valor\n21/07/2026;Padaria;-32,50"],
-      "extrato.csv",
-      { type: "text/csv" },
-    );
-    Object.defineProperty(file, "text", {
-      value: async () =>
-        "data;descricao;valor\n21/07/2026;Padaria;-32,50",
-    });
-    formData.set("statement", file);
-
-    await expect(
-      importStatement(INITIAL_STATE, formData),
-    ).resolves.toEqual({
-      status: "success",
-      message: "1 lançamento importado.",
-    });
-    expect(mocks.importCurrentExpenses).toHaveBeenCalledWith([
-      expect.objectContaining({ description: "Padaria", amount: 32.5 }),
-    ]);
-  });
-
-  it("imports debit transactions from an OFX file", async () => {
-    const formData = new FormData();
-    const contents =
-      "<OFX><STMTTRN><DTPOSTED>20260721<TRNAMT>-32.50<MEMO>Padaria</STMTTRN></OFX>";
-    const file = new File([contents], "extrato.ofx", {
-      type: "application/x-ofx",
-    });
+    formData.set("accountId", "10000000-0000-4000-8000-000000000001");
+    const contents = [
+      "data;descricao;valor",
+      "21/07/2026;Padaria;-32,50",
+      "22/07/2026;Pix recebido;200,00",
+    ].join("\n");
+    const file = new File([contents], "extrato.csv", { type: "text/csv" });
     Object.defineProperty(file, "text", { value: async () => contents });
     formData.set("statement", file);
 
-    await expect(
-      importStatement(INITIAL_STATE, formData),
-    ).resolves.toEqual({
+    await expect(importStatement(initialState, formData)).resolves.toEqual({
       status: "success",
-      message: "1 lançamento importado.",
+      message: "2 lançamentos importados.",
     });
-    expect(mocks.importCurrentExpenses).toHaveBeenCalledWith([
-      expect.objectContaining({ description: "Padaria", amount: 32.5 }),
-    ]);
+    expect(mocks.importCurrentTransactions).toHaveBeenCalledWith(
+      "10000000-0000-4000-8000-000000000001",
+      "extrato.csv",
+      [
+        expect.objectContaining({ transactionType: "expense" }),
+        expect.objectContaining({ transactionType: "income" }),
+      ],
+    );
   });
 
-  it("refuses a missing statement file", async () => {
-    await expect(
-      importStatement(INITIAL_STATE, new FormData()),
-    ).resolves.toEqual({
-      status: "error",
-      message: "Escolha um arquivo CSV ou OFX.",
+  it("reports duplicate rows from the import review", async () => {
+    mocks.importCurrentTransactions.mockResolvedValue({
+      imported: 0,
+      duplicates: 2,
     });
+    const formData = new FormData();
+    formData.set("accountId", "10000000-0000-4000-8000-000000000001");
+    const contents =
+      "data,descricao,valor\n2026-07-21,Padaria,-32.50\n2026-07-22,Pix,200.00";
+    const file = new File([contents], "extrato.csv", { type: "text/csv" });
+    Object.defineProperty(file, "text", { value: async () => contents });
+    formData.set("statement", file);
+
+    const result = await importStatement(initialState, formData);
+
+    expect(result.message).toBe(
+      "0 lançamentos importados. 2 duplicados ignorados.",
+    );
   });
 
-  it("deletes only UUID-shaped expense ids", async () => {
+  it("deletes only UUID-shaped transaction ids", async () => {
     const invalid = new FormData();
-    invalid.set("expenseId", "not-an-id");
-    await deleteExpense(invalid);
-    expect(mocks.deleteCurrentExpense).not.toHaveBeenCalled();
+    invalid.set("transactionId", "not-an-id");
+    await deleteTransaction(invalid);
+    expect(mocks.deleteCurrentTransaction).not.toHaveBeenCalled();
 
     const valid = new FormData();
-    valid.set("expenseId", "10000000-0000-4000-8000-000000000001");
-    await deleteExpense(valid);
-    expect(mocks.deleteCurrentExpense).toHaveBeenCalledWith(
-      "10000000-0000-4000-8000-000000000001",
+    valid.set("transactionId", "30000000-0000-4000-8000-000000000003");
+    await deleteTransaction(valid);
+    expect(mocks.deleteCurrentTransaction).toHaveBeenCalledWith(
+      "30000000-0000-4000-8000-000000000003",
     );
   });
 });
