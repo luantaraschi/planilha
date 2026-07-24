@@ -45,13 +45,7 @@ async function waitForToday(client, previousDocumentMarker) {
 }
 
 async function assertRailAccessibleNames(client) {
-  await client.send("Accessibility.enable");
-  const { nodes } = await client.send("Accessibility.getFullAXTree");
-  const names = nodes
-    .filter((node) => ["button", "link"].includes(node.role?.value))
-    .map((node) => node.name?.value)
-    .filter(Boolean);
-  const expected = [
+  const expectedDestinations = [
     "Hoje",
     "Agenda",
     "Tarefas",
@@ -61,8 +55,33 @@ async function assertRailAccessibleNames(client) {
     "Notas",
     "Assistente",
     "Configurações",
-    "Sair",
   ];
+  const visibleLabels = await evaluate(
+    client,
+    `([...document.querySelectorAll("[data-compact-label]")])
+      .filter((label) => getComputedStyle(label).display !== "none")
+      .map((label) => ({
+        accessible: label.closest("a")?.getAttribute("aria-label"),
+        visible: label.textContent?.trim()
+      }))`,
+  );
+  const expectedLabels = expectedDestinations.map((label) => ({
+    accessible: label,
+    visible: label,
+  }));
+  if (JSON.stringify(visibleLabels) !== JSON.stringify(expectedLabels)) {
+    throw new Error(
+      `tablet rail visible labels do not match accessible names: ${JSON.stringify(visibleLabels)}`,
+    );
+  }
+
+  await client.send("Accessibility.enable");
+  const { nodes } = await client.send("Accessibility.getFullAXTree");
+  const names = nodes
+    .filter((node) => ["button", "link"].includes(node.role?.value))
+    .map((node) => node.name?.value)
+    .filter(Boolean);
+  const expected = [...expectedDestinations, "Sair"];
   const missing = expected.filter((name) => !names.includes(name));
   if (missing.length > 0) {
     throw new Error(`tablet rail has unnamed destinations: ${missing.join(", ")}`);

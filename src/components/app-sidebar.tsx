@@ -73,7 +73,7 @@ const navigation = [
   {
     key: "settings",
     label: "Configurações",
-    compactLabel: "Ajustes",
+    compactLabel: "Configurações",
     icon: "settings",
     href: "/configuracoes",
     mobile: "secondary",

@@ -305,6 +305,8 @@ describe("responsive browser audit", () => {
     assert.match(source, /browserGateDocument/);
     assert.match(source, /document\.readyState === "complete"/);
     assert.match(source, /Accessibility\.getFullAXTree/);
+    assert.match(source, /data-compact-label/);
+    assert.match(source, /tablet rail visible labels/);
     assert.match(source, /viewport\.width === 800/);
     assert.doesNotMatch(source, /await wait\((?:500|1000)\)/);
   });

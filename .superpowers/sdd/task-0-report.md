@@ -11,6 +11,7 @@ o gate E2E responsivo passam.
 | --- | --- | --- |
 | Navegação | não havia labels compactos, estado ativo de `Mais` nem breakpoints 600/1024 | `AppSidebar` expõe labels curtos reais; CSS usa barra `<600`, rail `600–1023` e sidebar `>=1024` |
 | Nomes acessíveis | os links e `Sair` perdiam o nome acessível no rail porque o texto completo era ocultado | os destinos diretos recebem `aria-label` estável e o gate inspeciona a árvore AX no viewport de 800 px |
+| Label in Name | Configurações tinha texto visível “Ajustes” no rail, divergente do nome AX “Configurações” | o texto compacto, o `aria-label` e o nome AX são “Configurações”; o ellipsis existente continua disponível |
 | Draft local | a captura rápida iniciava vazia após remontagem e a chave fixa podia vazar entre contas | somente o rascunho não enviado usa `localStorage`, com chave derivada do `user.id`; troca A → B → A preserva isolamento e storage indisponível não quebra a captura |
 | PWA | manifest, service worker, shell offline, ícones e estado de conexão não existiam | manifest instalável, dois SVGs autorais, fallback público e aviso com retry |
 | Cache privado | não existia política testável | service worker só pré-cacheia `/offline.html` e os ícones; navegações usam network-only com fallback e nunca são gravadas |
@@ -30,6 +31,8 @@ Os testes foram escritos e observados em RED antes das correções:
   `SecurityError`;
 - `browser-gate-lib.node-test.mjs` falhou porque não havia marcador de documento,
   espera por carregamento completo nem inspeção da árvore AX.
+- o teste do componente reproduziu “Ajustes” no texto compacto, e a primeira
+  execução E2E confirmou a expectativa antiga na ordem de foco.
 
 Em GREEN:
 
@@ -38,6 +41,9 @@ Em GREEN:
   `localStorage` e foi testado na sequência A → B → A;
 - o gate espera a nova navegação sem sleeps fixos e consulta
   `Accessibility.getFullAXTree` em 800 px.
+- o gate compara exatamente, na ordem, os nove pares de texto visível e
+  `aria-label`; “Configurações” também foi confirmado na ordem de foco e na
+  árvore AX.
 
 ## Verificações finais
 

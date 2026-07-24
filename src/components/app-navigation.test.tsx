@@ -26,7 +26,7 @@ describe("AppSidebar", () => {
       "Metas",
       "Notas",
       "Assistente",
-      "Ajustes",
+      "Configurações",
     ]);
     expect(
       screen.getByRole("link", { name: "Finanças" }),

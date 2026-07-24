@@ -511,7 +511,7 @@ async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
     { tag: "A", text: "Metas" },
     { tag: "A", text: "Notas" },
     { tag: "A", text: "Assistente" },
-    { tag: "A", text: "Ajustes" },
+    { tag: "A", text: "Configurações" },
     { tag: "BUTTON", text: "Sair" },
   ]);
   const contentBeforeMoodFocus = await assertFocusOrder(
