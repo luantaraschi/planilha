@@ -18,12 +18,24 @@ import {
 const APP_URL = new URL(
   process.env.APP_URL ?? "http://127.0.0.1:3000/entrar",
 );
+const ROOT_URL = new URL("/", APP_URL);
 const SCREENSHOT_PATH = process.env.SCREENSHOT_PATH;
 const CHROME_PATH =
   process.env.CHROME_PATH ??
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const execFileAsync = promisify(execFile);
 const runs = new ResourceRegistry(closeRun);
+const INVALID_AUTH_MESSAGE =
+  "Não foi possível entrar. Confira seu e-mail e sua senha.";
+const ONBOARDING_EXPECTED = {
+  aiConsent: true,
+  auditAction: "identity.onboarding.completed",
+  auditCount: 1,
+  displayName: "E2E Browser Gate",
+  emailReminders: false,
+  onboardingCompleted: true,
+  timezone: "America/Sao_Paulo",
+};
 
 const wait = (milliseconds) =>
   new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
@@ -61,17 +73,11 @@ async function loadLocalSupabase() {
   return { apiUrl, serviceRoleKey: status.SERVICE_ROLE_KEY };
 }
 
-async function localRequest(
-  supabase,
-  pathname,
-  { body, method = "GET" } = {},
-) {
+async function localRequest(supabase, pathname, { method = "GET" } = {}) {
   const response = await fetch(new URL(`/auth/v1/admin${pathname}`, supabase.apiUrl), {
-    body: body ? JSON.stringify(body) : undefined,
     headers: {
       apikey: supabase.serviceRoleKey,
       authorization: `Bearer ${supabase.serviceRoleKey}`,
-      ...(body ? { "content-type": "application/json" } : {}),
     },
     method,
     signal: AbortSignal.timeout(5_000),
@@ -84,16 +90,14 @@ async function localRequest(
   return response.json();
 }
 
-async function verifyLocalIdentityRemoved(userId) {
+function assertLocalUserId(userId) {
   assert.match(
     userId,
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
   );
-  const query = `select
-    (select count(*) from auth.users where id = '${userId}') +
-    (select count(*) from public.profiles where user_id = '${userId}') +
-    (select count(*) from public.preferences where user_id = '${userId}') +
-    (select count(*) from public.audit_events where user_id = '${userId}');`;
+}
+
+async function runLocalSql(query) {
   const { stdout } = await execFileAsync(
     "docker",
     [
@@ -112,7 +116,17 @@ async function verifyLocalIdentityRemoved(userId) {
     ],
     { encoding: "utf8", timeout: 10_000, windowsHide: true },
   );
-  assert.equal(stdout.trim(), "0", "ephemeral identity data still exists");
+  return stdout.trim();
+}
+
+async function verifyLocalIdentityRemoved(userId) {
+  assertLocalUserId(userId);
+  const remainingRows = await runLocalSql(`select
+    (select count(*) from auth.users where id = '${userId}') +
+    (select count(*) from public.profiles where user_id = '${userId}') +
+    (select count(*) from public.preferences where user_id = '${userId}') +
+    (select count(*) from public.audit_events where user_id = '${userId}');`);
+  assert.equal(remainingRows, "0", "ephemeral identity data still exists");
 }
 
 async function listLocalUsers(supabase) {
@@ -120,17 +134,38 @@ async function listLocalUsers(supabase) {
   return data.users;
 }
 
-async function createLocalIdentity(supabase, identity) {
-  const user = await localRequest(supabase, "/users", {
-    body: {
-      email: identity.email,
-      email_confirm: true,
-      password: identity.password,
-    },
-    method: "POST",
-  });
+async function rememberLocalIdentity(supabase, identity) {
+  const user = (await listLocalUsers(supabase)).find(
+    (candidate) => candidate.email === identity.email,
+  );
+  assert.ok(user, "UI sign-up did not create the local auth user");
   assert.equal(typeof user.id, "string");
   identity.id = user.id;
+}
+
+async function inspectLocalIdentity(identity) {
+  assertLocalUserId(identity.id);
+  const data = JSON.parse(
+    await runLocalSql(`select json_build_object(
+      'displayName', profile.display_name,
+      'onboardingCompleted', profile.onboarding_completed,
+      'timezone', preference.timezone,
+      'emailReminders', preference.email_reminders,
+      'aiConsent', preference.ai_processing_consent,
+      'auditCount', (
+        select count(*) from public.audit_events
+        where user_id = profile.user_id
+      ),
+      'auditAction', (
+        select min(action) from public.audit_events
+        where user_id = profile.user_id
+      )
+    )::text
+    from public.profiles as profile
+    join public.preferences as preference using (user_id)
+    where profile.user_id = '${identity.id}';`),
+  );
+  assert.deepEqual(data, ONBOARDING_EXPECTED);
 }
 
 async function cleanupLocalIdentity(supabase, identity) {
@@ -349,6 +384,34 @@ async function replaceText(client, selector, value) {
   await client.send("Input.insertText", { text: value });
 }
 
+async function selectNextOption(client, selector, expectedValue) {
+  await click(client, selector);
+  await pressArrow(client, "down");
+  await pressTab(client);
+  assert.equal(
+    await evaluate(
+      client,
+      `document.querySelector(${JSON.stringify(selector)}).value`,
+    ),
+    expectedValue,
+  );
+}
+
+async function setCheckbox(client, selector, checked) {
+  const current = await evaluate(
+    client,
+    `document.querySelector(${JSON.stringify(selector)}).checked`,
+  );
+  if (current !== checked) await click(client, selector);
+  assert.equal(
+    await evaluate(
+      client,
+      `document.querySelector(${JSON.stringify(selector)}).checked`,
+    ),
+    checked,
+  );
+}
+
 async function browserRun(zoomSteps) {
   const profile = await mkdtemp(join(tmpdir(), "planner-browser-gate-"));
   const run = await runs.register({
@@ -391,7 +454,7 @@ async function browserRun(zoomSteps) {
   run.client = await connectCdp(page.webSocketDebuggerUrl);
   await run.client.send("Page.enable");
   await run.client.send("Runtime.enable");
-  await run.client.send("Page.navigate", { url: APP_URL.href });
+  await run.client.send("Page.navigate", { url: ROOT_URL.href });
   await waitForPath(run.client, "/entrar", "#email");
   for (let step = 0; step < zoomSteps; step += 1) {
     await zoomIn(run.client);
@@ -556,9 +619,14 @@ async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
   };
 }
 
-async function runBrowserGate(identity) {
+async function runBrowserGate(supabase, identity) {
   const baseline = await browserRun(0);
   const zoomed = await browserRun(5);
+  assert.equal(ROOT_URL.pathname, "/");
+  assert.equal(
+    await evaluate(zoomed.client, "location.pathname"),
+    "/entrar",
+  );
   const loginFocus = await assertFocusOrder(zoomed.client, [
     { tag: "A", text: "Meu espaço" },
     { id: "email", tag: "INPUT" },
@@ -585,7 +653,20 @@ async function runBrowserGate(identity) {
     zoomed.client,
     'form button[type="submit"]:not([data-auth-action])',
   );
+  await waitForPath(zoomed.client, "/entrar", '[role="alert"]');
+  assert.equal(
+    await evaluate(
+      zoomed.client,
+      'document.querySelector(\'[role="alert"]\').textContent.trim()',
+    ),
+    INVALID_AUTH_MESSAGE,
+  );
+
+  await replaceText(zoomed.client, "#email", identity.email);
+  await replaceText(zoomed.client, "#password", identity.password);
+  await click(zoomed.client, 'button[data-auth-action="signup"]');
   await waitForPath(zoomed.client, "/onboarding", "#displayName");
+  await rememberLocalIdentity(supabase, identity);
 
   const onboardingFocus = await assertFocusOrder(zoomed.client, [
     { tag: "A", text: "Meu espaço" },
@@ -599,20 +680,63 @@ async function runBrowserGate(identity) {
   assert.equal(onboardingMetrics.devicePixelRatio, loginMetrics.devicePixelRatio);
   assert.equal(onboardingMetrics.clientWidth, onboardingMetrics.scrollWidth);
 
-  await replaceText(zoomed.client, "#displayName", "E2E Browser Gate");
+  await replaceText(
+    zoomed.client,
+    "#displayName",
+    ONBOARDING_EXPECTED.displayName,
+  );
+  await selectNextOption(
+    zoomed.client,
+    "#timezone",
+    ONBOARDING_EXPECTED.timezone,
+  );
+  await setCheckbox(
+    zoomed.client,
+    'input[name="emailReminders"]',
+    ONBOARDING_EXPECTED.emailReminders,
+  );
+  await setCheckbox(
+    zoomed.client,
+    'input[name="aiConsent"]',
+    ONBOARDING_EXPECTED.aiConsent,
+  );
   await click(zoomed.client, 'button[type="submit"]');
   await waitForPath(zoomed.client, "/", "#quick-capture");
+  await inspectLocalIdentity(identity);
 
-  const today = await assertCompleteTodayFocus(
-    zoomed.client,
-    loginMetrics.devicePixelRatio,
-  );
   assert.equal(
     await evaluate(
       zoomed.client,
       'document.querySelector("h1")?.textContent',
     ),
-    "Bom dia, E2E Browser Gate",
+    `Bom dia, ${ONBOARDING_EXPECTED.displayName}`,
+  );
+
+  await click(zoomed.client, "details > summary");
+  assert.equal(
+    await evaluate(zoomed.client, 'document.querySelector("details").open'),
+    true,
+  );
+  await click(zoomed.client, 'details form button[type="submit"]');
+  await waitForPath(zoomed.client, "/entrar", "#email");
+
+  await replaceText(zoomed.client, "#email", identity.email);
+  await replaceText(zoomed.client, "#password", identity.password);
+  await click(
+    zoomed.client,
+    'form button[type="submit"]:not([data-auth-action])',
+  );
+  await waitForPath(zoomed.client, "/", "#quick-capture");
+  assert.equal(
+    await evaluate(
+      zoomed.client,
+      'document.querySelector("h1")?.textContent',
+    ),
+    `Bom dia, ${ONBOARDING_EXPECTED.displayName}`,
+  );
+  const today = await assertCompleteTodayFocus(
+    zoomed.client,
+    loginMetrics.devicePixelRatio,
   );
 
   if (SCREENSHOT_PATH) {
@@ -635,6 +759,8 @@ async function runBrowserGate(identity) {
   console.log(
     JSON.stringify(
       {
+        invalidCredentials: "safe inline alert",
+        rootRedirect: "/ → /entrar",
         routes: {
           entrar: { focusOrder: loginFocus, metrics: loginMetrics },
           onboarding: {
@@ -698,8 +824,7 @@ if (mode === "continue-today") {
   };
 
   try {
-    await createLocalIdentity(supabase, identity);
-    await withTimeoutCleanup(() => runBrowserGate(identity), {
+    await withTimeoutCleanup(() => runBrowserGate(supabase, identity), {
       cleanup: closeBrowserRuns,
       timeoutMs: 60_000,
     });

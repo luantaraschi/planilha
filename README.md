@@ -52,10 +52,11 @@ npm run build
 
 `npm run test:browser` é suportado no Windows com Node.js 22+, Docker Desktop,
 Supabase local, app local ativo e Google Chrome. O gate usa os atalhos e
-códigos de tecla do Windows, cria uma identidade local efêmera sem registrar
-as credenciais e a remove ao final, confirmando a ausência em `auth.users`,
-`profiles`, `preferences` e `audit_events`. Use `APP_URL`/`CHROME_PATH` se a
-URL local ou o executável do Chrome não estiverem nos padrões. URLs que não
+códigos de tecla do Windows, cria uma identidade local efêmera pela própria
+UI sem registrar as credenciais e a remove ao final, confirmando a ausência em
+`auth.users`, `profiles`, `preferences` e `audit_events`. A chave administrativa
+local é usada somente para inspeção e cleanup. Use `APP_URL`/`CHROME_PATH` se
+a URL local ou o executável do Chrome não estiverem nos padrões. URLs que não
 apontam para loopback são rejeitadas antes da criação da identidade.
 
 Para continuar somente a verificação completa de foco do Today com uma conta

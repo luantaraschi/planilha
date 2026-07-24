@@ -128,6 +128,7 @@ export async function pressEnter(client) {
 
 export async function pressArrow(client, direction) {
   const keys = {
+    down: { code: "ArrowDown", keyCode: 40 },
     left: { code: "ArrowLeft", keyCode: 37 },
     right: { code: "ArrowRight", keyCode: 39 },
   };

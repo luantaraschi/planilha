@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { describe, it } from "node:test";
 import {
   CdpClient,
@@ -157,7 +158,7 @@ describe("pressEnter", () => {
 });
 
 describe("pressArrow", () => {
-  it("sends native left and right arrow key events", async () => {
+  it("sends native left, right, and down arrow key events", async () => {
     const events = [];
     const client = {
       send: async (_method, event) => events.push(event),
@@ -165,6 +166,7 @@ describe("pressArrow", () => {
 
     await pressArrow(client, "right");
     await pressArrow(client, "left");
+    await pressArrow(client, "down");
 
     assert.deepEqual(events, [
       {
@@ -195,7 +197,34 @@ describe("pressArrow", () => {
         type: "keyUp",
         windowsVirtualKeyCode: 37,
       },
+      {
+        code: "ArrowDown",
+        key: "ArrowDown",
+        nativeVirtualKeyCode: 40,
+        type: "rawKeyDown",
+        windowsVirtualKeyCode: 40,
+      },
+      {
+        code: "ArrowDown",
+        key: "ArrowDown",
+        nativeVirtualKeyCode: 40,
+        type: "keyUp",
+        windowsVirtualKeyCode: 40,
+      },
     ]);
+  });
+});
+
+describe("default browser identity flow", () => {
+  it("creates the ephemeral user through the sign-up UI only", async () => {
+    const source = await readFile(
+      new URL("./browser-identity-gate.mjs", import.meta.url),
+      "utf8",
+    );
+
+    assert.doesNotMatch(source, /createLocalIdentity/);
+    assert.doesNotMatch(source, /method:\s*"POST"/);
+    assert.match(source, /button\[data-auth-action="signup"\]/);
   });
 });
 
