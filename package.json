@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:sites": "opennextjs-cloudflare build && node scripts/prepare-sites-build.mjs",
+    "build:sites": "opennextjs-cloudflare build && wrangler deploy --dry-run --outdir .sites-worker && node scripts/prepare-sites-build.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

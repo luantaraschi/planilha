@@ -3,6 +3,7 @@
 node_modules/
 .next/
 .open-next/
+.sites-worker/
 dist/
 .wrangler/
 coverage/
