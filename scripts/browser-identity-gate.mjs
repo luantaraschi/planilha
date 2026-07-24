@@ -577,15 +577,14 @@ async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
     ],
     { advance: arrowRight, reset: false },
   );
-  const priorityFocus = await assertFocusOrder(
-    client,
-    [
-      { id: "priority-documents", tag: "INPUT", type: "checkbox" },
-      { id: "priority-budget", tag: "INPUT", type: "checkbox" },
-      { id: "priority-medicine", tag: "INPUT", type: "checkbox" },
-    ],
-    { reset: false },
+  assert.equal(
+    await evaluate(
+      client,
+      `document.body.innerText.includes("Nenhuma prioridade sem horário.")`,
+    ),
+    true,
   );
+  const priorityFocus = [];
   await assertFocusOrder(
     client,
     [{ tag: "BODY" }],

@@ -24,6 +24,7 @@ const timelineLabels = {
   event: "Compromisso",
   task: "Tarefa",
   bill: "Conta",
+  habit: "Hábito",
 } as const;
 
 function MoodGlyph({ mouth }: { mouth: string }) {
@@ -81,7 +82,13 @@ export function TodayDashboard({
             </div>
 
             <ol className={styles.timelineList}>
-              {snapshot.timeline.map((item) => (
+              {snapshot.timeline.length === 0 ? (
+                <li className={styles.emptyTimeline}>
+                  <GardenIcon name="calendar" size={34} />
+                  <strong>Seu dia ainda está aberto.</strong>
+                  <span>Agende uma tarefa ou compromisso para montar o ritmo.</span>
+                </li>
+              ) : snapshot.timeline.map((item) => (
                 <li
                   className={styles.timelineItem}
                   data-kind={item.kind}
@@ -160,7 +167,11 @@ export function TodayDashboard({
               <span>{pendingPriorities} pendentes</span>
             </div>
             <ul className={styles.checkList}>
-              {snapshot.priorities.map((item) => (
+              {snapshot.priorities.length === 0 ? (
+                <li className={styles.emptyList}>
+                  Nenhuma prioridade sem horário.
+                </li>
+              ) : snapshot.priorities.map((item) => (
                 <li key={item.id}>
                   <input
                     aria-describedby="preview-notice"
@@ -189,7 +200,11 @@ export function TodayDashboard({
               </span>
             </div>
             <ul className={styles.habitList}>
-              {snapshot.habits.map((item) => (
+              {snapshot.habits.length === 0 ? (
+                <li className={styles.emptyList}>
+                  Hábitos chegam na próxima etapa.
+                </li>
+              ) : snapshot.habits.map((item) => (
                 <li data-done={item.done} key={item.id}>
                   <GardenIcon
                     name={item.done ? "wellbeing" : "today"}

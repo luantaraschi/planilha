@@ -150,6 +150,115 @@ export type Database = {
           },
         ]
       }
+      event_links: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          link_type: string
+          linked_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          link_type: string
+          linked_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          link_type?: string
+          linked_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_links_event_fk"
+            columns: ["event_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          all_day: boolean
+          created_at: string
+          ends_at: string
+          event_type: string
+          external_id: string | null
+          id: string
+          last_synced_at: string | null
+          location: string | null
+          notes: string | null
+          parent_event_id: string | null
+          recurrence_rule: string | null
+          source: string
+          starts_at: string
+          timezone: string
+          title: string
+          trip_ends_on: string | null
+          trip_starts_on: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          all_day?: boolean
+          created_at?: string
+          ends_at: string
+          event_type?: string
+          external_id?: string | null
+          id?: string
+          last_synced_at?: string | null
+          location?: string | null
+          notes?: string | null
+          parent_event_id?: string | null
+          recurrence_rule?: string | null
+          source?: string
+          starts_at: string
+          timezone?: string
+          title: string
+          trip_ends_on?: string | null
+          trip_starts_on?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          all_day?: boolean
+          created_at?: string
+          ends_at?: string
+          event_type?: string
+          external_id?: string | null
+          id?: string
+          last_synced_at?: string | null
+          location?: string | null
+          notes?: string | null
+          parent_event_id?: string | null
+          recurrence_rule?: string | null
+          source?: string
+          starts_at?: string
+          timezone?: string
+          title?: string
+          trip_ends_on?: string | null
+          trip_starts_on?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_parent_fk"
+            columns: ["parent_event_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           active: boolean
@@ -410,6 +519,36 @@ export type Database = {
           },
         ]
       }
+      planning_areas: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       preferences: {
         Row: {
           ai_processing_consent: boolean
@@ -473,6 +612,56 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          area_id: string | null
+          color: string
+          created_at: string
+          ends_on: string | null
+          id: string
+          name: string
+          notes: string | null
+          starts_on: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area_id?: string | null
+          color?: string
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          starts_on?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area_id?: string | null
+          color?: string
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          starts_on?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_area_fk"
+            columns: ["area_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "planning_areas"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       recurring_entries: {
         Row: {
           account_id: string
@@ -532,6 +721,123 @@ export type Database = {
             columns: ["category_id", "user_id"]
             isOneToOne: false
             referencedRelation: "financial_categories"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      task_links: {
+        Row: {
+          created_at: string
+          id: string
+          link_type: string
+          linked_id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link_type: string
+          linked_id: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link_type?: string
+          linked_id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_links_task_fk"
+            columns: ["task_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          carried_from_task_id: string | null
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          estimated_minutes: number | null
+          id: string
+          notes: string | null
+          parent_task_id: string | null
+          priority: string
+          project_id: string | null
+          recurrence_rule: string | null
+          scheduled_end: string | null
+          scheduled_start: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          carried_from_task_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          notes?: string | null
+          parent_task_id?: string | null
+          priority?: string
+          project_id?: string | null
+          recurrence_rule?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          carried_from_task_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          notes?: string | null
+          parent_task_id?: string | null
+          priority?: string
+          project_id?: string | null
+          recurrence_rule?: string | null
+          scheduled_end?: string | null
+          scheduled_start?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_carried_from_fk"
+            columns: ["carried_from_task_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_fk"
+            columns: ["parent_task_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_project_fk"
+            columns: ["project_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id", "user_id"]
           },
         ]
@@ -648,6 +954,27 @@ export type Database = {
           duplicate_count: number
           imported_count: number
         }[]
+      }
+      planning_occurrences: {
+        Args: { window_end: string; window_start: string }
+        Returns: {
+          all_day: boolean
+          ends_at: string
+          estimated_minutes: number
+          id: string
+          kind: string
+          last_synced_at: string
+          location: string
+          parent_event_id: string
+          source: string
+          source_id: string
+          starts_at: string
+          title: string
+        }[]
+      }
+      transition_task: {
+        Args: { action_input: string; task_id_input: string }
+        Returns: undefined
       }
     }
     Enums: {

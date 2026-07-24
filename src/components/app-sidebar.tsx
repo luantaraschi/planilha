@@ -3,7 +3,7 @@ import { GardenIcon, type GardenIconName } from "@/components/garden-icon";
 import { signOut } from "@/features/identity/auth-actions";
 import styles from "@/features/today/today-dashboard.module.css";
 
-type AppSection = "today" | "finance" | "settings";
+type AppSection = "today" | "agenda" | "tasks" | "finance" | "settings";
 
 const navigation = [
   {
@@ -19,7 +19,7 @@ const navigation = [
     label: "Agenda",
     compactLabel: "Agenda",
     icon: "calendar",
-    href: "/#linha-do-tempo",
+    href: "/agenda",
     mobile: "primary",
   },
   {
@@ -27,7 +27,7 @@ const navigation = [
     label: "Tarefas",
     compactLabel: "Tarefas",
     icon: "tasks",
-    href: "/#prioridades",
+    href: "/tarefas",
     mobile: "primary",
   },
   {

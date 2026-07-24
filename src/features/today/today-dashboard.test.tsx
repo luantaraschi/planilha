@@ -1,11 +1,45 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TODAY_DEMO } from "./today-model";
+import type { TodaySnapshot } from "./today-model";
 import { TodayDashboard } from "./today-dashboard";
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
 const USER_B = "22222222-2222-4222-8222-222222222222";
+const TODAY_SNAPSHOT: TodaySnapshot = {
+  date: new Date("2026-07-23T12:00:00-03:00"),
+  greetingName: "Lu",
+  timeline: [
+    {
+      id: "planning",
+      time: "09:00",
+      title: "Planejamento da semana",
+      kind: "event",
+      detail: "Google Agenda · sincronizado 08:45",
+    },
+    {
+      id: "proposal",
+      time: "11:00",
+      title: "Finalizar proposta",
+      kind: "task",
+      detail: "45 min",
+    },
+    {
+      id: "energy",
+      time: "17:00",
+      title: "Pagar energia",
+      kind: "bill",
+      detail: "Conta planejada",
+    },
+  ],
+  priorities: [
+    { id: "documents", title: "Enviar documentos", done: false },
+    { id: "budget", title: "Revisar orçamento de agosto", done: true },
+  ],
+  habits: [],
+  freeToSpendCents: 14_500,
+  projectedBalanceCents: 215_000,
+};
 
 describe("TodayDashboard", () => {
   beforeEach(() => {
@@ -17,7 +51,7 @@ describe("TodayDashboard", () => {
   });
 
   it("apresenta agenda, prioridades e panorama financeiro do dia", () => {
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Bom dia, Lu" }),
@@ -29,6 +63,7 @@ describe("TodayDashboard", () => {
       screen.getByRole("link", { name: "Pular para o conteúdo" }),
     ).toHaveAttribute("href", "#conteudo-principal");
     expect(screen.getByText("Planejamento da semana")).toBeInTheDocument();
+    expect(screen.getByText(/sincronizado 08:45/)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: /R\$\s145,00/ }),
     ).toBeInTheDocument();
@@ -39,7 +74,7 @@ describe("TodayDashboard", () => {
 
   it("oferece captura rápida e check-in de humor acessíveis", async () => {
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
 
     const capture = screen.getByRole("textbox", { name: "Captura rápida" });
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
@@ -51,7 +86,7 @@ describe("TodayDashboard", () => {
 
   it("confirma a captura sem sugerir persistência", async () => {
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
 
     const capture = screen.getByRole("textbox", { name: "Captura rápida" });
     await user.type(capture, "Pagar internet");
@@ -73,7 +108,7 @@ describe("TodayDashboard", () => {
     );
 
     const { unmount } = render(
-      <TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />,
+      <TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />,
     );
     expect(
       screen.getByRole("textbox", { name: "Captura rápida" }),
@@ -92,7 +127,7 @@ describe("TodayDashboard", () => {
     );
 
     unmount();
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
     expect(
       screen.getByRole("textbox", { name: "Captura rápida" }),
     ).toHaveValue("Comprar pão");
@@ -101,7 +136,7 @@ describe("TodayDashboard", () => {
   it("não revela o draft de uma conta após logout e login em outra", async () => {
     const user = userEvent.setup();
     const first = render(
-      <TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />,
+      <TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />,
     );
     await user.type(
       screen.getByRole("textbox", { name: "Captura rápida" }),
@@ -110,7 +145,7 @@ describe("TodayDashboard", () => {
     first.unmount();
 
     const second = render(
-      <TodayDashboard snapshot={TODAY_DEMO} userId={USER_B} />,
+      <TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_B} />,
     );
     expect(
       screen.getByRole("textbox", { name: "Captura rápida" }),
@@ -121,7 +156,7 @@ describe("TodayDashboard", () => {
     );
     second.unmount();
 
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
     expect(
       screen.getByRole("textbox", { name: "Captura rápida" }),
     ).toHaveValue("Nota privada da conta A");
@@ -136,7 +171,7 @@ describe("TodayDashboard", () => {
     });
 
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
     const capture = screen.getByRole("textbox", { name: "Captura rápida" });
     await user.type(capture, "Ainda funciona");
 
@@ -145,7 +180,7 @@ describe("TodayDashboard", () => {
 
   it("agrupa os módulos secundários em Mais", async () => {
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    render(<TodayDashboard snapshot={TODAY_SNAPSHOT} userId={USER_A} />);
 
     const more = screen.getByText("Mais").closest("summary");
     expect(more).not.toBeNull();
@@ -155,5 +190,23 @@ describe("TodayDashboard", () => {
     expect(
       screen.getAllByRole("button", { name: "Sair" }),
     ).toHaveLength(2);
+  });
+
+  it("orienta o primeiro uso quando ainda não há planejamento real", () => {
+    render(
+      <TodayDashboard
+        snapshot={{
+          ...TODAY_SNAPSHOT,
+          timeline: [],
+          priorities: [],
+          habits: [],
+        }}
+        userId={USER_A}
+      />,
+    );
+
+    expect(screen.getByText("Seu dia ainda está aberto.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma prioridade sem horário.")).toBeInTheDocument();
+    expect(screen.getByText("Hábitos chegam na próxima etapa.")).toBeInTheDocument();
   });
 });

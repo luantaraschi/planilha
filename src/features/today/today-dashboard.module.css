@@ -322,6 +322,29 @@
   margin: 1.65rem 0 0;
 }
 
+.emptyTimeline {
+  min-height: 13rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: .35rem;
+  color: var(--clay);
+  text-align: center;
+}
+
+.emptyTimeline svg {
+  color: var(--raspberry);
+}
+
+.emptyTimeline strong {
+  color: var(--cocoa);
+}
+
+.emptyTimeline span {
+  max-width: 32rem;
+  font-size: .84rem;
+}
+
 .timelineItem {
   display: grid;
   grid-template-columns: 3.6rem 1.15rem minmax(0, 1fr);
@@ -383,6 +406,12 @@
 .timelineItem[data-kind="bill"] .timelineStem > span {
   background: #af7828;
   box-shadow: 0 0 0 0.26rem rgb(255 242 190 / 82%);
+}
+
+.timelineItem[data-kind="habit"] .timelineStem > span {
+  background: #547850;
+  border-radius: 65% 35% 65% 35%;
+  box-shadow: 0 0 0 0.26rem rgb(223 234 217 / 78%);
 }
 
 .timelineCopy {
@@ -625,6 +654,12 @@
 .checkList {
   display: grid;
   gap: 0.8rem;
+}
+
+.emptyList {
+  color: #654f47;
+  font-size: .84rem;
+  line-height: 1.4;
 }
 
 .checkList li {
