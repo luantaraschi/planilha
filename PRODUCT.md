@@ -43,7 +43,7 @@ financeiros entram manualmente ou por CSV/OFX na primeira versão.
 
 ## Brand Commitments
 
-- Direção visual aprovada: Jardim de Pêssego.
+- Marca aprovada: Organiza, com direção visual pastel e acolhedora.
 - Personalidade leve, acolhedora, moderna, otimista e “good vibes”.
 - A interface não pode parecer um template genérico ou produto de “vibe code”.
 - Ilustrações devem ser autorais, art-directed e consistentes entre telas.

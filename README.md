@@ -1,4 +1,4 @@
-# Meu espaço
+# Organiza
 
 Planner pessoal em Next.js com autenticação e dados locais no Supabase.
 

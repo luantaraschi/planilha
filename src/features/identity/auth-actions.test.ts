@@ -77,7 +77,8 @@ describe("authentication actions", () => {
     });
 
     await expect(signIn(INITIAL_STATE, credentials())).resolves.toEqual({
-      message: "Não foi possível entrar. Confira seu e-mail e sua senha.",
+      message:
+        "Não foi possível entrar. Confira os dados ou, no primeiro acesso, escolha Criar minha conta.",
     });
     expect(mocks.redirect).not.toHaveBeenCalled();
   });

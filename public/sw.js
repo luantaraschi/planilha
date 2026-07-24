@@ -1,9 +1,9 @@
-const CACHE_NAME = "garden-shell-v1";
+const CACHE_NAME = "organiza-shell-v1";
 const OFFLINE_SHELL = "/offline.html";
 const PUBLIC_ASSETS = [
   OFFLINE_SHELL,
-  "/icons/garden-app.svg",
-  "/icons/garden-maskable.svg",
+  "/icons/organiza-app.svg",
+  "/icons/organiza-maskable.svg",
 ];
 
 self.addEventListener("install", (event) => {

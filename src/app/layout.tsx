@@ -10,8 +10,8 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Meu espaço",
-  description: "Organização pessoal, rotina e finanças em um só lugar.",
+  title: "Organiza",
+  description: "Finanças, rotina e planos em um só lugar.",
 };
 
 export const viewport: Viewport = {

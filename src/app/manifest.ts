@@ -3,27 +3,27 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     background_color: "#FFFAF7",
-    description: "Organização pessoal, rotina e finanças em um só lugar.",
+    description: "Finanças, rotina e planos em um só lugar.",
     display: "standalone",
     icons: [
       {
         purpose: "any",
         sizes: "any",
-        src: "/icons/garden-app.svg",
+        src: "/icons/organiza-app.svg",
         type: "image/svg+xml",
       },
       {
         purpose: "maskable",
         sizes: "any",
-        src: "/icons/garden-maskable.svg",
+        src: "/icons/organiza-maskable.svg",
         type: "image/svg+xml",
       },
     ],
     lang: "pt-BR",
-    name: "Meu espaço",
+    name: "Organiza",
     orientation: "any",
     scope: "/",
-    short_name: "Meu espaço",
+    short_name: "Organiza",
     start_url: "/",
     theme_color: "#A73655",
   };

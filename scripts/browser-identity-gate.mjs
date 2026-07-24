@@ -625,7 +625,7 @@ async function runBrowserGate(supabase, identity) {
     "/entrar",
   );
   const loginFocus = await assertFocusOrder(zoomed.client, [
-    { tag: "A", text: "Meu espaço" },
+    { tag: "A", text: "Organiza" },
     { id: "email", tag: "INPUT" },
     { id: "password", tag: "INPUT" },
     { tag: "BUTTON", text: "Entrar" },
@@ -666,7 +666,7 @@ async function runBrowserGate(supabase, identity) {
   await rememberLocalIdentity(supabase, identity);
 
   const onboardingFocus = await assertFocusOrder(zoomed.client, [
-    { tag: "A", text: "Meu espaço" },
+    { tag: "A", text: "Organiza" },
     { id: "displayName", tag: "INPUT" },
     { id: "timezone", tag: "SELECT" },
     { name: "emailReminders", tag: "INPUT", type: "checkbox" },

@@ -18,7 +18,8 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword(input.value);
   if (error) {
     return {
-      message: "Não foi possível entrar. Confira seu e-mail e sua senha.",
+      message:
+        "Não foi possível entrar. Confira os dados ou, no primeiro acesso, escolha Criar minha conta.",
     };
   }
 

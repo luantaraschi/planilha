@@ -9,21 +9,23 @@ const registrationPath = resolve(
 );
 
 describe("PWA manifest", () => {
-  it("declares install metadata and authored Jardim de Pêssego icons", () => {
+  it("declares install metadata and authored Organiza icons", () => {
     expect(existsSync(manifestPath)).toBe(true);
     if (!existsSync(manifestPath)) return;
 
     const source = readFileSync(manifestPath, "utf8");
 
-    expect(source).toMatch(/name:\s*"Meu espaço"/);
-    expect(source).toMatch(/short_name:\s*"Meu espaço"/);
+    expect(source).toMatch(/name:\s*"Organiza"/);
+    expect(source).toMatch(/short_name:\s*"Organiza"/);
+    expect(source).toContain("/icons/organiza-app.svg");
+    expect(source).toContain("/icons/organiza-maskable.svg");
     expect(source).toMatch(/display:\s*"standalone"/);
     expect(source).toMatch(/lang:\s*"pt-BR"/);
     expect(source).toMatch(/start_url:\s*"\/"/);
     expect(source).toMatch(/theme_color:\s*"#A73655"/);
-    expect(source).toMatch(/src:\s*"\/icons\/garden-app\.svg"/);
+    expect(source).toMatch(/src:\s*"\/icons\/organiza-app\.svg"/);
     expect(source).toMatch(/purpose:\s*"any"/);
-    expect(source).toMatch(/src:\s*"\/icons\/garden-maskable\.svg"/);
+    expect(source).toMatch(/src:\s*"\/icons\/organiza-maskable\.svg"/);
     expect(source).toMatch(/purpose:\s*"maskable"/);
   });
 });
@@ -40,8 +42,8 @@ describe("public offline shell", () => {
     expect(source).not.toMatch(/cache\.put|caches\.match\(request\)/);
     expect(source).not.toMatch(/\/api|supabase|authorization/i);
     expect(existsSync(resolve("public/offline.html"))).toBe(true);
-    expect(existsSync(resolve("public/icons/garden-app.svg"))).toBe(true);
-    expect(existsSync(resolve("public/icons/garden-maskable.svg"))).toBe(true);
+    expect(existsSync(resolve("public/icons/organiza-app.svg"))).toBe(true);
+    expect(existsSync(resolve("public/icons/organiza-maskable.svg"))).toBe(true);
   });
 
   it("registers natively and presents connection state with a retry action", () => {

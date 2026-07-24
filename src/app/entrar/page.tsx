@@ -6,7 +6,7 @@ import { AuthForm } from "@/features/identity/auth-form";
 import styles from "./auth-page.module.css";
 
 export const metadata: Metadata = {
-  title: "Entrar | Meu espaço",
+  title: "Entrar | Organiza",
   description: "Entre ou crie sua conta para voltar ao seu planejamento.",
 };
 
@@ -16,7 +16,7 @@ export default function SignInPage() {
       <section className={styles.morning} aria-labelledby="welcome-title">
         <Link className={styles.brand} href="/">
           <GardenIcon name="wellbeing" size={27} />
-          <span>Meu espaço</span>
+          <span>Organiza</span>
         </Link>
         <div className={styles.welcome}>
           <p>Um começo tranquilo</p>

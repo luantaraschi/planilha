@@ -8,7 +8,7 @@ import { OnboardingForm } from "@/features/identity/onboarding-form";
 import styles from "@/app/entrar/auth-page.module.css";
 
 export const metadata: Metadata = {
-  title: "Prepare seu espaço | Meu espaço",
+  title: "Prepare seu espaço | Organiza",
   description: "Escolha como seu planejamento pessoal deve começar.",
 };
 
@@ -21,7 +21,7 @@ export default async function OnboardingPage() {
       <section className={styles.morning} aria-labelledby="welcome-title">
         <Link className={styles.brand} href="/">
           <GardenIcon name="wellbeing" size={27} />
-          <span>Meu espaço</span>
+          <span>Organiza</span>
         </Link>
         <div className={styles.welcome}>
           <p>Seu espaço, do seu jeito</p>

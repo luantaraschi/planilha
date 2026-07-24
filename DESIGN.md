@@ -4,13 +4,13 @@ name: Superapp de organização pessoal
 description: Um planner ilustrado que conecta rotina, bem-estar e finanças.
 ---
 
-# Design System: Jardim de Pêssego
+# Design System: Organiza
 
 ## Overview
 
 **Creative North Star: "O planner ilustrado na mesa do café da manhã"**
 
-Jardim de Pêssego é um mundo claro, acolhedor e tátil: papelaria contemporânea,
+Organiza é um mundo claro, acolhedor e tátil: papelaria contemporânea,
 abas coloridas, desenhos autorais e pictogramas com personalidade. A interface
 deve parecer desenhada por um estúdio de produto cuidadoso, não montada com uma
 grade de cards e um kit padrão.
@@ -126,7 +126,7 @@ espessura de traço e iluminação.
 - **Today shell:** sidebar persistente no desktop e barra inferior com cinco
   destinos + `Mais` no mobile, rail rotulado no tablet e link de salto para o
   conteúdo principal.
-- **PWA shell:** manifest e ícones Jardim de Pêssego, fallback offline público,
+- **PWA shell:** manifest e ícones Organiza, fallback offline público,
   aviso de conexão e service worker que nunca armazena páginas ou respostas
   autenticadas.
 - **Morning header:** saudação, data localizada, ação `Adicionar` e ilustração

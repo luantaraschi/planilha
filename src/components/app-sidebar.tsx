@@ -131,7 +131,7 @@ export function AppSidebar({ active }: { active: AppSection }) {
         <span aria-hidden="true" className={styles.brandMark}>
           <GardenIcon name="wellbeing" size={26} />
         </span>
-        <span className={styles.brandLabel}>Meu espaço</span>
+        <span className={styles.brandLabel}>Organiza</span>
       </Link>
 
       <nav aria-label="Principal" className={styles.nav}>
