@@ -10,6 +10,9 @@ describe("browser Supabase environment access", () => {
     );
 
     expect(source).toContain("process.env.NEXT_PUBLIC_SUPABASE_URL");
+    expect(source).toContain(
+      "process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    );
     expect(source).toContain("process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY");
     expect(source).not.toContain("getSupabaseConfig(process.env)");
   });
