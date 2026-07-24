@@ -31,6 +31,24 @@ describe("AppSidebar", () => {
     expect(
       screen.getByRole("link", { name: "Finanças" }),
     ).toHaveAttribute("aria-current", "page");
+    expect(
+      [...container.querySelectorAll("nav > a")].map((link) =>
+        link.getAttribute("aria-label"),
+      ),
+    ).toEqual([
+      "Hoje",
+      "Agenda",
+      "Tarefas",
+      "Finanças",
+      "Bem-estar",
+      "Metas",
+      "Notas",
+      "Assistente",
+      "Configurações",
+    ]);
+    expect(
+      container.querySelector("nav > form button"),
+    ).toHaveAttribute("aria-label", "Sair");
   });
 
   it("exposes the active secondary destination through the mobile More state", () => {

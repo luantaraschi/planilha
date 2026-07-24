@@ -296,6 +296,19 @@ describe("hasVisibleFocusIndicator", () => {
 });
 
 describe("responsive browser audit", () => {
+  it("waits for a new document and checks tablet accessibility names", async () => {
+    const source = await readFile(
+      new URL("./browser-responsive-gate.mjs", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(source, /browserGateDocument/);
+    assert.match(source, /document\.readyState === "complete"/);
+    assert.match(source, /Accessibility\.getFullAXTree/);
+    assert.match(source, /viewport\.width === 800/);
+    assert.doesNotMatch(source, /await wait\((?:500|1000)\)/);
+  });
+
   it("keeps the five acceptance viewports in one shared contract", () => {
     assert.deepEqual(gateLib.RESPONSIVE_VIEWPORTS, [
       { height: 800, name: "mobile", width: 360 },

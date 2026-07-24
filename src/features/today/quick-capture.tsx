@@ -7,20 +7,41 @@ import styles from "./today-dashboard.module.css";
 
 const INITIAL_PREVIEW_NOTICE =
   "Prévia navegável: as alterações ficam apenas nesta tela.";
-const DRAFT_KEY = "quick-capture-draft";
+const DRAFT_KEY_PREFIX = "quick-capture-draft";
+
+function readDraft(key: string) {
+  try {
+    return localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeDraft(key: string, value: string) {
+  try {
+    if (value) {
+      localStorage.setItem(key, value);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // A captura continua funcional quando o navegador bloqueia storage.
+  }
+}
 
 export function QuickCapture({
   dateLabel,
   greeting,
+  userId,
 }: {
   dateLabel: string;
   greeting: string;
+  userId: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const draftKey = `${DRAFT_KEY_PREFIX}:${userId}`;
   const [draft, setDraft] = useState(() =>
-    typeof window === "undefined"
-      ? ""
-      : (localStorage.getItem(DRAFT_KEY) ?? ""),
+    typeof window === "undefined" ? "" : readDraft(draftKey),
   );
   const [feedback, setFeedback] = useState(INITIAL_PREVIEW_NOTICE);
 
@@ -35,7 +56,7 @@ export function QuickCapture({
 
     setFeedback(`“${trimmedDraft}” foi adicionado só nesta prévia.`);
     setDraft("");
-    localStorage.removeItem(DRAFT_KEY);
+    writeDraft(draftKey, "");
   }
 
   return (
@@ -70,11 +91,7 @@ export function QuickCapture({
           onChange={(event) => {
             const value = event.target.value;
             setDraft(value);
-            if (value) {
-              localStorage.setItem(DRAFT_KEY, value);
-            } else {
-              localStorage.removeItem(DRAFT_KEY);
-            }
+            writeDraft(draftKey, value);
           }}
           placeholder="Registre uma tarefa, gasto, nota ou compromisso…"
           ref={inputRef}

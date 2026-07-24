@@ -2,65 +2,64 @@
 
 ## Status
 
-Implementação concluída e commitada com uma preocupação aberta no controlador
-E2E responsivo, detalhada abaixo. Os gates determinísticos, a suíte completa e o
-build passam.
+Implementação concluída. Os gates determinísticos, a suíte completa, o build e
+o gate E2E responsivo passam.
 
 ## RED / GREEN
 
 | Ciclo | RED observado | GREEN |
 | --- | --- | --- |
 | Navegação | não havia labels compactos, estado ativo de `Mais` nem breakpoints 600/1024 | `AppSidebar` expõe labels curtos reais; CSS usa barra `<600`, rail `600–1023` e sidebar `>=1024` |
-| Draft local | captura rápida iniciava vazia após remontagem | somente o rascunho não enviado usa `localStorage`; envio e campo vazio removem a chave |
+| Nomes acessíveis | os links e `Sair` perdiam o nome acessível no rail porque o texto completo era ocultado | os destinos diretos recebem `aria-label` estável e o gate inspeciona a árvore AX no viewport de 800 px |
+| Draft local | a captura rápida iniciava vazia após remontagem e a chave fixa podia vazar entre contas | somente o rascunho não enviado usa `localStorage`, com chave derivada do `user.id`; troca A → B → A preserva isolamento e storage indisponível não quebra a captura |
 | PWA | manifest, service worker, shell offline, ícones e estado de conexão não existiam | manifest instalável, dois SVGs autorais, fallback público e aviso com retry |
 | Cache privado | não existia política testável | service worker só pré-cacheia `/offline.html` e os ícones; navegações usam network-only com fallback e nunca são gravadas |
 | Auditor responsivo | viewports e falhas de segurança visual não existiam | biblioteca compartilha cinco viewports e falha em overflow, ações cobertas e dialogs inacessíveis |
-| Zoom do rail | `Sair` ficava fora da altura útil no gate a 200% | a navegação tem rolagem vertical própria e mantém foco/ações alcançáveis |
-| Lint/build | lint rejeitou `setState` em effect; CSS Module rejeitou seletor global | inicializador lazy e seletor qualificado passaram em lint/build |
+| Reload do gate | `Page.reload` podia validar o DOM anterior | cada iteração marca o documento antigo e aguarda um documento novo, `readyState="complete"` e a captura rápida conectada e dimensionada |
+| Zoom do rail | `Sair` ficava fora da altura útil no gate a 200% | a navegação tem rolagem vertical própria e mantém foco e ações alcançáveis |
+| Lint/build | lint rejeitou `setState` em effect; CSS Module rejeitou seletor global | inicializador lazy e seletor qualificado passaram em lint e build |
 
-RED focado:
+### Correções da revisão independente
 
-- 6 falhas Vitest de navegação/draft/layout, mais 3 contratos PWA ausentes;
-- 2 falhas node:test no contrato responsivo;
-- lint encontrou 1 erro e 1 warning;
-- build encontrou 1 seletor CSS Module impuro;
-- browser E2E revelou expectativas antigas de `Mais` no rail e ausência de
-  rolagem sob zoom.
+Os testes foram escritos e observados em RED antes das correções:
 
-GREEN focado:
+- `app-navigation.test.tsx` falhou porque os nove links diretos e `Sair` não
+  tinham nomes acessíveis estáveis;
+- `today-dashboard.test.tsx` falhou ao restaurar a chave escopada, mostrou o
+  draft da conta A na conta B e quebrou quando o navegador lançou
+  `SecurityError`;
+- `browser-gate-lib.node-test.mjs` falhou porque não havia marcador de documento,
+  espera por carregamento completo nem inspeção da árvore AX.
 
-- 5 arquivos Vitest, 17 testes, todos passaram;
-- `scripts/browser-gate-lib.node-test.mjs`: 15 testes, todos passaram;
-- typecheck focado passou.
+Em GREEN:
+
+- os links do rail e `Sair` mantêm os nomes esperados;
+- o draft usa `quick-capture-draft:${userId}`, resiste a falhas de
+  `localStorage` e foi testado na sequência A → B → A;
+- o gate espera a nova navegação sem sleeps fixos e consulta
+  `Accessibility.getFullAXTree` em 800 px.
 
 ## Verificações finais
 
-- `npm test`: 35 arquivos, 126 testes, todos passaram.
+- `npm test`: 35 arquivos, 128 testes, todos passaram.
 - `npm run typecheck`: passou.
 - `npm run lint`: passou sem warning.
 - `npm run build`: passou; `/manifest.webmanifest` foi gerado como rota
   estática.
 - `git diff --check`: passou; apenas avisos esperados de LF/CRLF do Windows.
 - `npm run test:browser`:
-  - 15/15 testes unitários passaram;
+  - 16/16 testes unitários passaram;
   - identidade, onboarding, logout/login e auditoria de zoom passaram;
-  - o viewport mobile foi exercitado com Pointer Events `pointerType="touch"`;
-  - a execução E2E responsiva parou ao validar o Assistente na transição para o
-    rail (`assistant is unreachable from the rail/sidebar`).
-
-## Preocupação aberta do browser gate
-
-O HTML/CSS e os testes determinísticos confirmam que o link do Assistente
-permanece no rail e que o breakpoint é `600–1023px`, mas a troca de emulação do
-Chrome headless ainda reporta esse link como sem retângulo visível após o
-viewport mobile. O gate mantém a falha estrita; ela não foi mascarada nem
-removida. O sintetizador touch do Chrome local também não ativou controles de
-forma confiável, então o gate usa `PointerEvent` nativo com
-`pointerType="touch"` sobre alvo confirmado por `elementFromPoint`.
+  - os cinco viewports foram validados: 360×800, 800×1280, 1280×800, 720×800 e
+    1440×900;
+  - o viewport mobile foi exercitado com Pointer Events
+    `pointerType="touch"` sobre alvo confirmado por `elementFromPoint`;
+  - a árvore de acessibilidade do rail em 800 px contém Hoje, Agenda, Tarefas,
+    Finanças, Bem-estar, Metas, Notas, Assistente, Configurações e Sair.
 
 ## Arquivos
 
-Criados:
+Criados na Task 0:
 
 - `public/icons/garden-app.svg`
 - `public/icons/garden-maskable.svg`
@@ -72,15 +71,17 @@ Criados:
 - `src/components/app-navigation.test.tsx`
 - `src/components/service-worker-registration.tsx`
 
-Modificados:
+Principais arquivos modificados:
 
 - `DESIGN.md`
 - `package.json`
 - `scripts/browser-gate-lib.mjs`
 - `scripts/browser-gate-lib.node-test.mjs`
 - `scripts/browser-identity-gate.mjs`
+- `scripts/browser-responsive-gate.mjs`
 - `src/app/globals.css`
 - `src/app/layout.tsx`
+- `src/app/page.tsx`
 - `src/components/app-sidebar.tsx`
 - `src/features/ai/ai-settings.module.css`
 - `src/features/finance/finance-dashboard.module.css`
@@ -88,6 +89,7 @@ Modificados:
 - `src/features/today/quick-capture.tsx`
 - `src/features/today/today-dashboard.module.css`
 - `src/features/today/today-dashboard.test.tsx`
+- `src/features/today/today-dashboard.tsx`
 
 ## Self-review
 
@@ -99,6 +101,6 @@ Modificados:
   armazena navegações, APIs ou respostas autenticadas.
 - Safe areas, foco, active state, movimento reduzido já existente e rolagem sob
   zoom foram mantidos em todos os modos.
-- O draft local se limita à captura rápida existente; não foi criado framework
-  genérico.
-- A falha E2E restante está registrada como preocupação, não como gate verde.
+- O draft local se limita à captura rápida existente, é isolado pelo UUID
+  verificado da sessão e não cria um framework genérico.
+- A revisão final não encontrou mudanças fora do escopo.

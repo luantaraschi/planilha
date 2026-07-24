@@ -1,16 +1,23 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TODAY_DEMO } from "./today-model";
 import { TodayDashboard } from "./today-dashboard";
+
+const USER_A = "11111111-1111-4111-8111-111111111111";
+const USER_B = "22222222-2222-4222-8222-222222222222";
 
 describe("TodayDashboard", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("apresenta agenda, prioridades e panorama financeiro do dia", () => {
-    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: "Bom dia, Lu" }),
@@ -32,7 +39,7 @@ describe("TodayDashboard", () => {
 
   it("oferece captura rápida e check-in de humor acessíveis", async () => {
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
 
     const capture = screen.getByRole("textbox", { name: "Captura rápida" });
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
@@ -44,7 +51,7 @@ describe("TodayDashboard", () => {
 
   it("confirma a captura sem sugerir persistência", async () => {
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
 
     const capture = screen.getByRole("textbox", { name: "Captura rápida" });
     await user.type(capture, "Pagar internet");
@@ -60,9 +67,14 @@ describe("TodayDashboard", () => {
   });
 
   it("restaura somente o rascunho ainda não enviado da captura rápida", async () => {
-    localStorage.setItem("quick-capture-draft", "Levar guarda-chuva");
+    localStorage.setItem(
+      `quick-capture-draft:${USER_A}`,
+      "Levar guarda-chuva",
+    );
 
-    const { unmount } = render(<TodayDashboard snapshot={TODAY_DEMO} />);
+    const { unmount } = render(
+      <TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />,
+    );
     expect(
       screen.getByRole("textbox", { name: "Captura rápida" }),
     ).toHaveValue("Levar guarda-chuva");
@@ -75,18 +87,65 @@ describe("TodayDashboard", () => {
       screen.getByRole("textbox", { name: "Captura rápida" }),
       "Comprar pão",
     );
-    expect(localStorage.getItem("quick-capture-draft")).toBe("Comprar pão");
+    expect(localStorage.getItem(`quick-capture-draft:${USER_A}`)).toBe(
+      "Comprar pão",
+    );
 
     unmount();
-    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
     expect(
       screen.getByRole("textbox", { name: "Captura rápida" }),
     ).toHaveValue("Comprar pão");
   });
 
+  it("não revela o draft de uma conta após logout e login em outra", async () => {
+    const user = userEvent.setup();
+    const first = render(
+      <TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />,
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Captura rápida" }),
+      "Nota privada da conta A",
+    );
+    first.unmount();
+
+    const second = render(
+      <TodayDashboard snapshot={TODAY_DEMO} userId={USER_B} />,
+    );
+    expect(
+      screen.getByRole("textbox", { name: "Captura rápida" }),
+    ).toHaveValue("");
+    await user.type(
+      screen.getByRole("textbox", { name: "Captura rápida" }),
+      "Nota da conta B",
+    );
+    second.unmount();
+
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    expect(
+      screen.getByRole("textbox", { name: "Captura rápida" }),
+    ).toHaveValue("Nota privada da conta A");
+  });
+
+  it("continua utilizável quando o armazenamento local está indisponível", async () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    });
+
+    const user = userEvent.setup();
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
+    const capture = screen.getByRole("textbox", { name: "Captura rápida" });
+    await user.type(capture, "Ainda funciona");
+
+    expect(capture).toHaveValue("Ainda funciona");
+  });
+
   it("agrupa os módulos secundários em Mais", async () => {
     const user = userEvent.setup();
-    render(<TodayDashboard snapshot={TODAY_DEMO} />);
+    render(<TodayDashboard snapshot={TODAY_DEMO} userId={USER_A} />);
 
     const more = screen.getByText("Mais").closest("summary");
     expect(more).not.toBeNull();

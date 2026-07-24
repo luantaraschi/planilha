@@ -40,7 +40,13 @@ function MoodGlyph({ mouth }: { mouth: string }) {
   );
 }
 
-export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
+export function TodayDashboard({
+  snapshot,
+  userId,
+}: {
+  snapshot: TodaySnapshot;
+  userId: string;
+}) {
   const pendingPriorities = snapshot.priorities.filter(
     (item) => !item.done,
   ).length;
@@ -57,6 +63,7 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
         <QuickCapture
           dateLabel={formatLongDate(snapshot.date)}
           greeting={`Bom dia, ${snapshot.greetingName}`}
+          userId={userId}
         />
 
         <div className={styles.contentGrid}>

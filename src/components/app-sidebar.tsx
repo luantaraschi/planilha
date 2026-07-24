@@ -103,7 +103,11 @@ function SignOutIcon() {
 
 function SignOutButton() {
   return (
-    <button className={styles.signOutButton} type="submit">
+    <button
+      aria-label="Sair"
+      className={styles.signOutButton}
+      type="submit"
+    >
       <SignOutIcon />
       <span className={styles.navLabel}>Sair</span>
       <span
@@ -135,6 +139,7 @@ export function AppSidebar({ active }: { active: AppSection }) {
           const isActive = item.key === active;
           return (
             <Link
+              aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
               className={isActive ? styles.navActive : styles.navItem}
               data-mobile-secondary={

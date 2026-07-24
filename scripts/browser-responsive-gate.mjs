@@ -20,12 +20,21 @@ async function evaluate(client, expression, awaitPromise = false) {
   return response.result.value;
 }
 
-async function waitForToday(client) {
+async function waitForToday(client, previousDocumentMarker) {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     if (
       await evaluate(
         client,
-        'location.pathname === "/" && document.querySelector("#quick-capture") !== null',
+        `(() => {
+          const capture = document.querySelector("#quick-capture");
+          const rect = capture?.getBoundingClientRect();
+          return document.readyState === "complete" &&
+            document.documentElement.dataset.browserGateDocument !==
+              ${JSON.stringify(previousDocumentMarker)} &&
+            location.pathname === "/" &&
+            capture?.isConnected === true &&
+            rect.width > 0 && rect.height > 0;
+        })()`,
       )
     ) {
       return;
@@ -33,6 +42,31 @@ async function waitForToday(client) {
     await wait(50);
   }
   throw new Error("Responsive gate could not load Today");
+}
+
+async function assertRailAccessibleNames(client) {
+  await client.send("Accessibility.enable");
+  const { nodes } = await client.send("Accessibility.getFullAXTree");
+  const names = nodes
+    .filter((node) => ["button", "link"].includes(node.role?.value))
+    .map((node) => node.name?.value)
+    .filter(Boolean);
+  const expected = [
+    "Hoje",
+    "Agenda",
+    "Tarefas",
+    "Finanças",
+    "Bem-estar",
+    "Metas",
+    "Notas",
+    "Assistente",
+    "Configurações",
+    "Sair",
+  ];
+  const missing = expected.filter((name) => !names.includes(name));
+  if (missing.length > 0) {
+    throw new Error(`tablet rail has unnamed destinations: ${missing.join(", ")}`);
+  }
 }
 
 async function touchClick(client, selector) {
@@ -217,9 +251,16 @@ export async function runResponsiveGate(client) {
       enabled: true,
       maxTouchPoints: 1,
     });
+    const previousDocumentMarker = `before-${viewport.name}-${Date.now()}`;
+    await evaluate(
+      client,
+      `document.documentElement.dataset.browserGateDocument =
+        ${JSON.stringify(previousDocumentMarker)}`,
+    );
     await client.send("Page.reload");
-    await waitForToday(client);
+    await waitForToday(client, previousDocumentMarker);
 
+    if (viewport.width === 800) await assertRailAccessibleNames(client);
     await assertAssistantReachable(client, mobile);
     await assertKeyboardEntry(client);
 
