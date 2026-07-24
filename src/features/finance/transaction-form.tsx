@@ -29,6 +29,7 @@ export function TransactionForm({
   const formRef = useRef<HTMLFormElement>(null);
   const categoryType =
     transactionType === "income" ? "income" : "expense";
+  const activeAccounts = accounts.filter((account) => account.active);
   const visibleCategories = categories.filter(
     (category) =>
       category.active && category.categoryType === categoryType,
@@ -65,9 +66,7 @@ export function TransactionForm({
         <label>
           <span>Conta</span>
           <select name="accountId" required>
-            {accounts
-              .filter((account) => account.active)
-              .map((account) => (
+            {activeAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}
                 </option>
@@ -79,9 +78,7 @@ export function TransactionForm({
             <span>Conta de destino</span>
             <select name="transferAccountId" required>
               <option value="">Escolha</option>
-              {accounts
-                .filter((account) => account.active)
-                .map((account) => (
+              {activeAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>
@@ -156,7 +153,7 @@ export function TransactionForm({
         </p>
         <button
           className={styles.primaryButton}
-          disabled={pending || accounts.length === 0}
+          disabled={pending || activeAccounts.length === 0}
           type="submit"
         >
           {pending ? "Salvando…" : "Adicionar lançamento"}

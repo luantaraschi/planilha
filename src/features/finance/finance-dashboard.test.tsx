@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { FinanceWorkspace } from "./finance-model";
 import { FinanceDashboard } from "./finance-dashboard";
@@ -191,5 +191,39 @@ describe("FinanceDashboard", () => {
     expect(
       screen.queryByRole("button", { name: "Remover Extrato protegido" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("removes inactive accounts from every selector", () => {
+    render(
+      <FinanceDashboard
+        defaultDate="2026-07-24"
+        greetingName="Lu"
+        monthLabel="julho de 2026"
+        workspace={{
+          ...workspace,
+          accounts: [
+            ...workspace.accounts,
+            {
+              id: "10000000-0000-4000-8000-000000000099",
+              name: "Conta arquivada",
+              accountType: "checking",
+              openingBalanceCents: 0,
+              active: false,
+            },
+          ],
+        }}
+      />,
+    );
+
+    for (const name of ["Conta exibida", "Conta", "Conta do extrato"]) {
+      expect(
+        within(screen.getByRole("combobox", { name })).queryByRole("option", {
+          name: "Conta arquivada",
+        }),
+      ).not.toBeInTheDocument();
+    }
+    expect(
+      screen.getByLabelText(/Escolha o extrato do banco/),
+    ).toHaveAttribute("type", "file");
   });
 });

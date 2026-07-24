@@ -32,6 +32,12 @@ export function StatementImporter({
     initialState,
   );
   const [preview, setPreview] = useState<Preview>(emptyPreview);
+  const activeAccounts = accounts.filter((account) => account.active);
+  const activeSelectedAccountId = activeAccounts.some(
+    (account) => account.id === selectedAccountId,
+  )
+    ? selectedAccountId
+    : null;
 
   async function previewFile(file?: File) {
     if (!file) {
@@ -63,11 +69,13 @@ export function StatementImporter({
         <label>
           <span>Conta do extrato</span>
           <select
-            defaultValue={selectedAccountId ?? accounts[0]?.id ?? ""}
+            defaultValue={
+              activeSelectedAccountId ?? activeAccounts[0]?.id ?? ""
+            }
             name="accountId"
             required
           >
-            {accounts.map((account) => (
+            {activeAccounts.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name}
               </option>
@@ -155,7 +163,9 @@ export function StatementImporter({
         <button
           className={styles.secondaryButton}
           disabled={
-            pending || preview.rows.length === 0 || accounts.length === 0
+            pending ||
+            preview.rows.length === 0 ||
+            activeAccounts.length === 0
           }
           type="submit"
         >

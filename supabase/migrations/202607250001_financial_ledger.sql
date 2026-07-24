@@ -80,6 +80,23 @@ create table public.transactions (
     references public.financial_accounts(id, user_id),
   foreign key (import_batch_id, user_id)
     references public.import_batches(id, user_id),
+  constraint transactions_source_import_context check (
+    (
+      source = 'bank_import'
+      and import_batch_id is not null
+      and import_fingerprint is not null
+    )
+    or (
+      source = 'manual'
+      and import_batch_id is null
+      and import_fingerprint is null
+    )
+    or (
+      source = 'legacy'
+      and import_batch_id is null
+      and import_fingerprint is not null
+    )
+  ),
   check (
     (
       transaction_type = 'transfer'
@@ -348,10 +365,19 @@ select
   category.id,
   'monthly',
   case
-    when private.monthly_due_on(current_date, expense.due_day) >= current_date
-      then private.monthly_due_on(current_date, expense.due_day)
+    when private.monthly_due_on(
+      timezone(preferences.timezone, now())::date,
+      expense.due_day
+    ) >= timezone(preferences.timezone, now())::date
+      then private.monthly_due_on(
+        timezone(preferences.timezone, now())::date,
+        expense.due_day
+      )
     else private.monthly_due_on(
-      (current_date + interval '1 month')::date,
+      (
+        timezone(preferences.timezone, now())::date
+        + interval '1 month'
+      )::date,
       expense.due_day
     )
   end,
@@ -361,6 +387,8 @@ from public.expenses expense
 join public.financial_accounts account
   on account.user_id = expense.user_id
  and account.name = 'Conta principal'
+join public.preferences preferences
+  on preferences.user_id = expense.user_id
 left join public.financial_categories category
   on category.user_id = expense.user_id
  and category.category_type = 'expense'
@@ -398,7 +426,6 @@ begin
   foreach table_name in array array[
     'financial_accounts',
     'financial_categories',
-    'transactions',
     'recurring_entries',
     'budgets',
     'financial_goals'
@@ -436,6 +463,56 @@ begin
   end loop;
 end;
 $$;
+
+alter table public.transactions enable row level security;
+
+create policy transactions_select_own
+on public.transactions
+for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy transactions_insert_manual
+on public.transactions
+for insert
+to authenticated
+with check (
+  (select auth.uid()) = user_id
+  and source = 'manual'
+  and import_batch_id is null
+  and import_fingerprint is null
+);
+
+create policy transactions_update_manual
+on public.transactions
+for update
+to authenticated
+using (
+  (select auth.uid()) = user_id
+  and source = 'manual'
+  and import_batch_id is null
+  and import_fingerprint is null
+)
+with check (
+  (select auth.uid()) = user_id
+  and source = 'manual'
+  and import_batch_id is null
+  and import_fingerprint is null
+);
+
+create policy transactions_delete_manual
+on public.transactions
+for delete
+to authenticated
+using (
+  (select auth.uid()) = user_id
+  and source = 'manual'
+  and import_batch_id is null
+  and import_fingerprint is null
+);
+
+revoke all on public.transactions from public, anon, authenticated;
+grant select, insert, update, delete on public.transactions to authenticated;
 
 alter table public.import_batches enable row level security;
 alter table public.import_batch_rows enable row level security;

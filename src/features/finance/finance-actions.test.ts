@@ -5,12 +5,14 @@ const mocks = vi.hoisted(() => ({
   deleteCurrentTransaction: vi.fn(),
   importCurrentTransactions: vi.fn(),
   revalidatePath: vi.fn(),
+  InactiveFinancialAccountError: class extends Error {},
 }));
 
 vi.mock("./finance-repository", () => ({
   addCurrentTransaction: mocks.addCurrentTransaction,
   deleteCurrentTransaction: mocks.deleteCurrentTransaction,
   importCurrentTransactions: mocks.importCurrentTransactions,
+  InactiveFinancialAccountError: mocks.InactiveFinancialAccountError,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
@@ -37,7 +39,7 @@ function transactionForm() {
 describe("finance actions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mocks.addCurrentTransaction.mockResolvedValue(true);
+    mocks.addCurrentTransaction.mockResolvedValue("added");
     mocks.deleteCurrentTransaction.mockResolvedValue("deleted");
     mocks.importCurrentTransactions.mockResolvedValue({
       imported: 2,
@@ -137,5 +139,36 @@ describe("finance actions", () => {
       message: "Lançamentos importados ficam preservados no histórico.",
     });
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("reports a stale inactive account for manual transactions", async () => {
+    mocks.addCurrentTransaction.mockResolvedValue("inactive_account");
+
+    await expect(
+      addTransaction(initialState, transactionForm()),
+    ).resolves.toEqual({
+      status: "error",
+      message:
+        "A conta selecionada está inativa. Atualize a página e escolha uma conta ativa.",
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("reports a stale inactive account for statement imports", async () => {
+    mocks.importCurrentTransactions.mockRejectedValue(
+      new mocks.InactiveFinancialAccountError(),
+    );
+    const formData = new FormData();
+    formData.set("accountId", "10000000-0000-4000-8000-000000000001");
+    const contents = "data;descricao;valor\n21/07/2026;Padaria;-32,50";
+    const file = new File([contents], "extrato.csv", { type: "text/csv" });
+    Object.defineProperty(file, "text", { value: async () => contents });
+    formData.set("statement", file);
+
+    await expect(importStatement(initialState, formData)).resolves.toEqual({
+      status: "error",
+      message:
+        "A conta selecionada está inativa. Atualize a página e escolha uma conta ativa.",
+    });
   });
 });

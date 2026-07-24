@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   addCurrentTransaction,
   deleteCurrentTransaction,
+  InactiveFinancialAccountError,
   importCurrentTransactions,
 } from "./finance-repository";
 import {
@@ -18,6 +19,8 @@ export type FinanceActionState = {
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const inactiveAccountMessage =
+  "A conta selecionada está inativa. Atualize a página e escolha uma conta ativa.";
 
 export async function addTransaction(
   _previousState: FinanceActionState,
@@ -27,7 +30,11 @@ export async function addTransaction(
   if (!normalized.ok) {
     return { status: "error", message: normalized.message };
   }
-  if (!(await addCurrentTransaction(normalized.value))) {
+  const result = await addCurrentTransaction(normalized.value);
+  if (result === "inactive_account") {
+    return { status: "error", message: inactiveAccountMessage };
+  }
+  if (result !== "added") {
     return {
       status: "error",
       message: "Não foi possível adicionar o lançamento.",
@@ -93,7 +100,10 @@ export async function importStatement(
       status: "success",
       message: importedLabel + duplicateLabel,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof InactiveFinancialAccountError) {
+      return { status: "error", message: inactiveAccountMessage };
+    }
     return {
       status: "error",
       message: "Não foi possível ler esse extrato CSV ou OFX.",

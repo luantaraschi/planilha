@@ -23,6 +23,8 @@ const budgetFields = "id, category_id, month, amount_cents";
 const goalFields =
   "id, name, target_cents, saved_cents, target_on, status";
 
+export class InactiveFinancialAccountError extends Error {}
+
 function safeCents(value: number | string) {
   const cents = Number(value);
   if (!Number.isSafeInteger(cents)) {
@@ -168,6 +170,24 @@ export async function getCurrentFinanceLedger(): Promise<FinanceLedger> {
 export async function addCurrentTransaction(input: TransactionInput) {
   const supabase = await createClient();
   const userId = await getVerifiedUserId(supabase);
+  const accountIds = [
+    ...new Set(
+      [input.accountId, input.transferAccountId].filter(
+        (accountId): accountId is string => Boolean(accountId),
+      ),
+    ),
+  ];
+  const { data: activeAccounts, error: accountError } = await supabase
+    .from("financial_accounts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("active", true)
+    .in("id", accountIds);
+  if (accountError) return "error" as const;
+  if ((activeAccounts ?? []).length !== accountIds.length) {
+    return "inactive_account" as const;
+  }
+
   const { error } = await supabase.from("transactions").insert({
     user_id: userId,
     account_id: input.accountId,
@@ -181,7 +201,7 @@ export async function addCurrentTransaction(input: TransactionInput) {
     transfer_account_id: input.transferAccountId,
     source: "manual",
   });
-  return !error;
+  return error ? ("error" as const) : ("added" as const);
 }
 
 function fingerprint(accountId: string, row: StatementRow) {
@@ -236,6 +256,9 @@ export async function importCurrentTransactions(
     rows_input: rowsInput,
   });
   const result = data?.[0];
+  if (error?.message.includes("invalid account")) {
+    throw new InactiveFinancialAccountError();
+  }
   if (error || !result) {
     throw new Error("Não foi possível concluir a revisão do extrato.");
   }

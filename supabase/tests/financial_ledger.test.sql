@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(48);
 
 select has_table('public', 'financial_accounts', 'financial accounts exist');
 select has_table('public', 'financial_categories', 'financial categories exist');
@@ -132,6 +132,69 @@ select is(
   ),
   11::bigint,
   'new identities receive useful default categories'
+);
+
+select throws_ok(
+  $$
+    insert into public.transactions (
+      user_id,
+      account_id,
+      transaction_type,
+      amount_cents,
+      occurred_on,
+      status,
+      description,
+      import_fingerprint,
+      source
+    )
+    select
+      '51000000-0000-0000-0000-000000000001',
+      account.id,
+      'adjustment',
+      100,
+      '2026-07-20',
+      'cleared',
+      'Imported without batch',
+      'invalid-bank-context',
+      'bank_import'
+    from public.financial_accounts account
+    where account.user_id = '51000000-0000-0000-0000-000000000001'
+      and account.name = 'Conta principal'
+  $$,
+  '23514',
+  null,
+  'bank imports require a batch and fingerprint'
+);
+select throws_ok(
+  $$
+    insert into public.transactions (
+      user_id,
+      account_id,
+      transaction_type,
+      amount_cents,
+      occurred_on,
+      status,
+      description,
+      import_fingerprint,
+      source
+    )
+    select
+      '51000000-0000-0000-0000-000000000001',
+      account.id,
+      'adjustment',
+      100,
+      '2026-07-20',
+      'cleared',
+      'Manual with fingerprint',
+      'invalid-manual-context',
+      'manual'
+    from public.financial_accounts account
+    where account.user_id = '51000000-0000-0000-0000-000000000001'
+      and account.name = 'Conta principal'
+  $$,
+  '23514',
+  null,
+  'manual transactions cannot carry import context'
 );
 
 create temporary table other_identity_account as
@@ -380,6 +443,75 @@ select is(
   ),
   2::bigint,
   'the immutable review keeps both source rows'
+);
+select throws_ok(
+  $$
+    insert into public.transactions (
+      user_id,
+      account_id,
+      transaction_type,
+      amount_cents,
+      occurred_on,
+      status,
+      description,
+      import_batch_id,
+      import_fingerprint,
+      source
+    )
+    select
+      '51000000-0000-0000-0000-000000000001',
+      account.id,
+      'income',
+      1000,
+      '2026-07-22',
+      'cleared',
+      'Direct bank import',
+      batch.id,
+      'direct-bank-fingerprint',
+      'bank_import'
+    from public.financial_accounts account
+    cross join public.import_batches batch
+    where account.user_id = '51000000-0000-0000-0000-000000000001'
+      and account.name = 'Conta principal'
+      and batch.user_id = account.user_id
+      and batch.confirmation_key = 'confirmation-key-1'
+  $$,
+  '42501',
+  null,
+  'authenticated DML cannot insert a bank import outside the RPC'
+);
+select is_empty(
+  $$
+    update public.transactions
+    set description = 'Changed imported row'
+    where import_fingerprint = 'same-fingerprint'
+    returning 1
+  $$,
+  'authenticated DML cannot update an imported transaction'
+);
+select is_empty(
+  $$
+    delete from public.transactions
+    where import_fingerprint = 'same-fingerprint'
+    returning 1
+  $$,
+  'authenticated DML cannot delete an imported transaction'
+);
+select throws_ok(
+  $$
+    update public.transactions transaction
+    set
+      source = 'bank_import',
+      import_batch_id = batch.id,
+      import_fingerprint = 'manual-promoted-to-import'
+    from public.import_batches batch
+    where transaction.description = 'Mercado'
+      and batch.user_id = transaction.user_id
+      and batch.confirmation_key = 'confirmation-key-1'
+  $$,
+  '42501',
+  null,
+  'authenticated DML cannot promote a manual row into import history'
 );
 
 select throws_ok(

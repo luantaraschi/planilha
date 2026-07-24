@@ -321,3 +321,124 @@ como evidência concluída.
 As correções acima substituem a preocupação anterior sobre chamadas sequenciais
 de importação: a confirmação agora é uma RPC PostgreSQL única, atômica e
 idempotente.
+
+---
+
+## Correções do segundo re-review
+
+### Imutabilidade das transações importadas
+
+- `supabase/migrations/202607250001_financial_ledger.sql`
+  - adiciona a constraint `transactions_source_import_context`;
+  - exige lote e fingerprint para `bank_import`;
+  - proíbe contexto de importação em `manual`;
+  - preserva o fingerprint legado sem associá-lo a um lote;
+  - substitui as policies genéricas de `transactions` por policies que só
+    permitem INSERT, UPDATE e DELETE autenticados em linhas manuais;
+  - mantém a RPC `security definer` como único caminho para gravar
+    `bank_import`.
+- `supabase/tests/financial_ledger.test.sql`
+  - prova as combinações da constraint;
+  - prova que INSERT, UPDATE e DELETE diretos em importados não alteram dados;
+  - prova que uma linha manual não pode ser promovida a importada por DML.
+
+### Confiança no recorte ativo
+
+- `src/features/finance/finance-model.ts`
+  - calcula previsão e confiança a partir das recorrências simultaneamente
+    ativas e pertencentes às contas ativas do recorte selecionado.
+- `src/features/finance/finance-model.test.ts`
+  - cobre uma conta selecionada sem recorrência ativa, mesmo quando outra conta
+    possui recorrências globais.
+
+### Contas inativas e seleção stale
+
+- `account-list.tsx`, `transaction-form.tsx` e `statement-importer.tsx`
+  removem contas inativas dos respectivos seletores e desabilitam submissão
+  quando nenhuma conta ativa existe.
+- O seletor de importação ignora um `selectedAccountId` stale e volta para a
+  primeira conta ativa.
+- `finance-repository.ts` valida no servidor todas as contas de um lançamento,
+  inclusive o destino da transferência.
+- A rejeição `invalid account` da RPC é convertida em
+  `InactiveFinancialAccountError`.
+- `finance-actions.ts` retorna a mensagem precisa:
+  `A conta selecionada está inativa. Atualize a página e escolha uma conta ativa.`
+- Testes de dashboard, repositório e ações cobrem seletores e os dois caminhos
+  stale.
+
+### Backfill no timezone do proprietário
+
+- O backfill de recorrências junta `public.preferences` por proprietário.
+- A data local usada para escolher este ou o próximo mês é calculada com
+  `timezone(preferences.timezone, now())::date`, eliminando a dependência do
+  `current_date` do servidor.
+- O contrato da migração cobre o join, o cálculo local e a ausência do antigo
+  anchor global.
+
+### Hit areas verificadas pelo controlador
+
+O controlador inspecionou o aplicativo real em `800x1280`, `1280x800` e
+`720x800`: não houve overflow horizontal, textos e valores permaneceram
+legíveis e o workspace continuou em duas colunas nos tablets.
+
+Os controles medidos abaixo do contrato foram elevados para no mínimo 48 px:
+
+- wrapper e input do valor monetário: `3rem`;
+- botões primário e secundário: `3rem`;
+- botão de envio do assistente: `3rem × 3rem`;
+- perguntas sugeridas: `min-height: 3rem`;
+- label clicável do arquivo: `min-height: 3rem`.
+
+O input de arquivo continua nativo e dentro do próprio `label`, preservando
+nome acessível, teclado e toda a área do label como alvo clicável.
+
+## RED / GREEN do segundo re-review
+
+| Ciclo | RED observado | GREEN |
+| --- | --- | --- |
+| Contexto importado | migration contract não encontrou constraint nem policies manuais | constraint e policies específicas passaram; pgTAP bloqueou todo DML direto testado |
+| Confiança | conta selecionada sem recorrência ativa ainda retornava `complete` | retorna `partial` e explica a recorrência ausente |
+| Seletores | `Conta arquivada` ainda aparecia em `Conta exibida` e `Conta do extrato` | nenhuma conta inativa aparece nos três seletores |
+| Conta stale | ação manual retornava sucesso e importação retornava erro genérico | ambos retornam a mensagem precisa de conta inativa |
+| Timezone | contrato encontrou `current_date` global e nenhum join com preferences | backfill usa a data local de cada proprietário |
+| Hit areas | contrato encontrou 43 px/30 px nos controles frequentes | todos os alvos identificados têm pelo menos 48 px |
+
+Execução RED focada: 6 arquivos, 42 testes, 11 falhas esperadas e 31 passes.
+Ao tornar o contrato CSS estrito ao bloco de cada seletor, um RED adicional
+confirmou que o input monetário interno ainda tinha 46 px; ele também foi
+elevado a 48 px antes do GREEN final.
+
+Execução GREEN focada:
+
+- `npm test -- src/features/finance/finance-migration-contract.test.ts src/features/finance/finance-model.test.ts src/features/finance/finance-responsive.test.ts src/features/finance/finance-actions.test.ts src/features/finance/finance-repository.test.ts src/features/finance/finance-dashboard.test.tsx`
+- 6 arquivos, 42 testes, todos passaram.
+
+## Gates finais do segundo re-review
+
+- `npm run db:reset`
+  - migração completa aplicada com sucesso.
+- `npm run db:test`
+  - 4 arquivos SQL;
+  - 104 testes;
+  - todos passaram.
+- `npm run typecheck`
+  - passou sem erros.
+- `npm test`
+  - 33 arquivos;
+  - 116 testes;
+  - todos passaram.
+- `npm run lint`
+  - passou sem erros ou avisos.
+- `npm run build`
+  - build de produção concluído;
+  - `/financas` compilada como rota dinâmica.
+- `git diff --check`
+  - passou.
+
+## Preocupação restante
+
+O layout real já foi validado pelo controlador nos três viewports. As novas
+dimensões de 48 px têm contrato automatizado e preservam a estrutura aprovada;
+uma re-medição visual desses controles após o ajuste continua recomendável no
+próximo passe do controlador.

@@ -255,6 +255,26 @@ describe("buildMonthlyFinanceSummary", () => {
       projectedEndBalanceCents: 90_000,
     });
   });
+
+  it("marks confidence partial when the selected account has no active recurrence", () => {
+    const summary = buildMonthlyFinanceSummary(
+      {
+        ...ledger,
+        recurringEntries: ledger.recurringEntries.map((entry) => ({
+          ...entry,
+          accountId: "account-savings",
+          active: entry.id === "internet",
+        })),
+      },
+      "2026-07-24",
+      "account-checking",
+    );
+
+    expect(summary.confidence).toBe("partial");
+    expect(summary.missingInputs).toContain(
+      "Cadastre entradas e contas recorrentes para completar a previsão.",
+    );
+  });
 });
 
 describe("normalizeTransactionInput", () => {

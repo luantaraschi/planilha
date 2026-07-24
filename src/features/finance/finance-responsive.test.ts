@@ -28,4 +28,21 @@ describe("finance tablet layout", () => {
       /\.accountStrip,\s*\.monthlySummary,\s*\.workspace,\s*\.assistant\s*\{[\s\S]*?grid-template-columns:\s*1fr/,
     );
   });
+
+  it("keeps frequent tablet controls at least 48px tall", () => {
+    expect(css).toMatch(/\.moneyInput\s*\{[^}]*min-height:\s*3rem/);
+    expect(css).toMatch(
+      /\.moneyInput input\s*\{[^}]*min-height:\s*3rem/,
+    );
+    expect(css).toMatch(
+      /\.primaryButton,\s*\.secondaryButton\s*\{[^}]*min-height:\s*3rem/,
+    );
+    expect(css).toMatch(
+      /\.suggestions button\s*\{[^}]*min-height:\s*3rem/,
+    );
+    expect(css).toMatch(
+      /\.chatForm button\s*\{[^}]*width:\s*3rem;[^}]*height:\s*3rem/,
+    );
+    expect(css).toMatch(/\.fileDrop\s*\{[^}]*min-height:\s*3rem/);
+  });
 });

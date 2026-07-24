@@ -16,6 +16,13 @@ export function AccountList({
   accounts: FinancialAccount[];
   selectedAccountId: string | null;
 }) {
+  const activeAccounts = accounts.filter((account) => account.active);
+  const activeSelectedAccountId = activeAccounts.some(
+    (account) => account.id === selectedAccountId,
+  )
+    ? selectedAccountId
+    : null;
+
   return (
     <section aria-labelledby="accounts-title" className={styles.accountStrip}>
       <div className={styles.accountIntro}>
@@ -25,12 +32,12 @@ export function AccountList({
       <form className={styles.accountSelector} method="get">
         <label htmlFor="finance-account">Conta exibida</label>
         <select
-          defaultValue={selectedAccountId ?? ""}
+          defaultValue={activeSelectedAccountId ?? ""}
           id="finance-account"
           name="conta"
         >
           <option value="">Todas as contas</option>
-          {accounts.map((account) => (
+          {activeAccounts.map((account) => (
             <option key={account.id} value={account.id}>
               {account.name}
             </option>

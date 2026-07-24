@@ -18,6 +18,7 @@ import {
   addCurrentTransaction,
   deleteCurrentTransaction,
   getCurrentFinanceLedger,
+  InactiveFinancialAccountError,
   importCurrentTransactions,
 } from "./finance-repository";
 
@@ -103,7 +104,22 @@ describe("finance repository", () => {
 
   it("inserts a manual transaction in integer cents", async () => {
     const insert = vi.fn().mockResolvedValue({ error: null });
-    mocks.from.mockReturnValue({ insert });
+    mocks.from.mockImplementation((table: string) =>
+      table === "financial_accounts"
+        ? {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  in: async () => ({
+                    data: [{ id: "account-1" }],
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }
+        : { insert },
+    );
 
     await expect(
       addCurrentTransaction({
@@ -117,7 +133,7 @@ describe("finance repository", () => {
         categoryId: "category-1",
         transferAccountId: null,
       }),
-    ).resolves.toBe(true);
+    ).resolves.toBe("added");
 
     expect(insert).toHaveBeenCalledWith({
       user_id: "10000000-0000-4000-8000-000000000001",
@@ -132,6 +148,35 @@ describe("finance repository", () => {
       transfer_account_id: null,
       source: "manual",
     });
+  });
+
+  it("rejects a stale inactive account before inserting a manual transaction", async () => {
+    const insert = vi.fn();
+    mocks.from.mockReturnValue({
+      select: () => ({
+        eq: () => ({
+          eq: () => ({
+            in: async () => ({ data: [], error: null }),
+          }),
+        }),
+      }),
+      insert,
+    });
+
+    await expect(
+      addCurrentTransaction({
+        accountId: "inactive-account",
+        transactionType: "expense",
+        amountCents: 8_240,
+        occurredOn: "2026-07-20",
+        dueOn: null,
+        status: "cleared",
+        description: "Mercado",
+        categoryId: "category-1",
+        transferAccountId: null,
+      }),
+    ).resolves.toBe("inactive_account");
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("confirms credits and debits in one atomic RPC", async () => {
@@ -218,6 +263,26 @@ describe("finance repository", () => {
     expect(mocks.rpc.mock.calls[0]?.[1].confirmation_key_input).toBe(
       firstCall.confirmation_key_input,
     );
+  });
+
+  it("reports the inactive-account error returned by the import RPC", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: null,
+      error: { message: "invalid account" },
+    });
+
+    await expect(
+      importCurrentTransactions("inactive-account", "extrato.csv", [
+        {
+          rowNumber: 2,
+          description: "Padaria",
+          amountCents: 3_250,
+          occurredOn: "2026-07-21",
+          transactionType: "expense",
+          externalId: "row-1",
+        },
+      ]),
+    ).rejects.toBeInstanceOf(InactiveFinancialAccountError);
   });
 
   it("deletes manual transactions but protects imported history", async () => {

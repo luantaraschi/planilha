@@ -372,6 +372,9 @@ export function buildMonthlyFinanceSummary(
   );
   const selectedIds = new Set(selectedAccounts.map((account) => account.id));
   const inScope = (accountId: string) => selectedIds.has(accountId);
+  const scopedActiveRecurringEntries = ledger.recurringEntries.filter(
+    (entry) => entry.active && inScope(entry.accountId),
+  );
 
   const monthTransactions = ledger.transactions.filter(
     (transaction) =>
@@ -431,10 +434,7 @@ export function buildMonthlyFinanceSummary(
   let forecastIncomeCents = 0;
   let forecastExpenseCents = 0;
   let invalidRecurringSchedule = false;
-  for (const entry of ledger.recurringEntries) {
-    if (!entry.active || !inScope(entry.accountId)) {
-      continue;
-    }
+  for (const entry of scopedActiveRecurringEntries) {
     const occurrences = recurringOccurrencesUntil(entry, currentDate, end);
     if (occurrences === null) {
       invalidRecurringSchedule = true;
@@ -471,7 +471,7 @@ export function buildMonthlyFinanceSummary(
       "Defina um orçamento mensal para calcular o valor livre por dia.",
     );
   }
-  if (ledger.recurringEntries.length === 0) {
+  if (scopedActiveRecurringEntries.length === 0) {
     missingInputs.push(
       "Cadastre entradas e contas recorrentes para completar a previsão.",
     );
