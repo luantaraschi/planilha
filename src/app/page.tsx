@@ -4,7 +4,7 @@ import { TodayDashboard } from "@/features/today/today-dashboard";
 import { getCurrentTodaySnapshot } from "@/features/today/today-repository";
 
 export default async function HomePage() {
-  const { preferences, profile, userId } = await getCurrentIdentity();
+  const { preferences, profile } = await getCurrentIdentity();
   if (!profile.onboarding_completed) redirect("/onboarding");
   const snapshot = await getCurrentTodaySnapshot({
     greetingName: profile.display_name,
@@ -14,7 +14,6 @@ export default async function HomePage() {
   return (
     <TodayDashboard
       snapshot={snapshot}
-      userId={userId}
     />
   );
 }

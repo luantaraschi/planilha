@@ -85,6 +85,7 @@ export function composeTodaySnapshot(input: TodayInput): TodaySnapshot {
   ].sort((a, b) => a.time.localeCompare(b.time));
   return {
     date: input.date,
+    dateIso: dateInTimeZone(input.date, input.timeZone),
     greetingName: input.greetingName,
     timeZone: input.timeZone,
     timeline,

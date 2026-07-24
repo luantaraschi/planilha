@@ -26,6 +26,11 @@ describe("finance repository", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.createClient.mockResolvedValue({ from: mocks.from, rpc: mocks.rpc });
+    mocks.from.mockImplementation((table: string) =>
+      table === "financial_categories"
+        ? { upsert: vi.fn().mockResolvedValue({ error: null }) }
+        : {},
+    );
     mocks.getVerifiedUserId.mockResolvedValue(
       "10000000-0000-4000-8000-000000000001",
     );
@@ -229,7 +234,7 @@ describe("finance repository", () => {
         }),
       ],
     });
-    expect(mocks.from).not.toHaveBeenCalled();
+    expect(mocks.from).toHaveBeenCalledWith("financial_categories");
   });
 
   it("sends a deterministic key and lets the RPC review repeated rows", async () => {

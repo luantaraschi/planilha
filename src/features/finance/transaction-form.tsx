@@ -27,26 +27,19 @@ export function TransactionForm({
     initialState,
   );
   const formRef = useRef<HTMLFormElement>(null);
-  const categoryType =
-    transactionType === "income" ? "income" : "expense";
   const activeAccounts = accounts.filter((account) => account.active);
   const visibleCategories = categories.filter(
     (category) =>
-      category.active && category.categoryType === categoryType,
+      category.active &&
+      category.categoryType === (transactionType === "income" ? "income" : "expense"),
   );
 
   useEffect(() => {
-    if (state.status === "success") {
-      formRef.current?.reset();
-    }
-  }, [state]);
+    if (state.status === "success") formRef.current?.reset();
+  }, [state.status]);
 
   return (
-    <form
-      action={formAction}
-      className={styles.transactionForm}
-      ref={formRef}
-    >
+    <form action={formAction} className={styles.transactionForm} ref={formRef}>
       <div className={styles.formGrid}>
         <label>
           <span>Tipo</span>
@@ -67,45 +60,11 @@ export function TransactionForm({
           <span>Conta</span>
           <select name="accountId" required>
             {activeAccounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
+              <option key={account.id} value={account.id}>
+                {account.name}
+              </option>
+            ))}
           </select>
-        </label>
-        {transactionType === "transfer" ? (
-          <label>
-            <span>Conta de destino</span>
-            <select name="transferAccountId" required>
-              <option value="">Escolha</option>
-              {activeAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-        ) : transactionType === "adjustment" ? null : (
-          <label>
-            <span>Categoria</span>
-            <select name="categoryId" required>
-              {visibleCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className={styles.descriptionField}>
-          <span>Descrição</span>
-          <input
-            autoComplete="off"
-            maxLength={120}
-            name="description"
-            placeholder="Ex.: aluguel, salário, reserva"
-            required
-          />
         </label>
         <label>
           <span>Valor</span>
@@ -120,28 +79,64 @@ export function TransactionForm({
             />
           </span>
         </label>
-        <label>
-          <span>Data</span>
+        <label className={styles.descriptionField}>
+          <span>
+            Descrição <small>opcional</small>
+          </span>
           <input
-            defaultValue={defaultDate}
-            name="occurredOn"
-            required
-            type="date"
+            autoComplete="off"
+            maxLength={120}
+            name="description"
+            placeholder="Ex.: mercado, salário, reserva"
           />
-        </label>
-        <label>
-          <span>Estado</span>
-          <select defaultValue="cleared" name="status">
-            <option value="cleared">Confirmado</option>
-            <option value="planned">Planejado</option>
-          </select>
-        </label>
-        <label>
-          <span>Vencimento (opcional)</span>
-          <input name="dueOn" type="date" />
         </label>
       </div>
 
+      <details className={styles.transactionDetails}>
+        <summary>Adicionar detalhes</summary>
+        <div className={styles.formGrid}>
+          {transactionType === "transfer" ? (
+            <label>
+              <span>Conta de destino</span>
+              <select name="transferAccountId" required>
+                <option value="">Escolha</option>
+                {activeAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : transactionType === "adjustment" ? null : (
+            <label>
+              <span>Categoria <small>opcional</small></span>
+              <select defaultValue="" name="categoryId">
+                <option value="">Sem categoria</option>
+                {visibleCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label>
+            <span>Data</span>
+            <input defaultValue={defaultDate} name="occurredOn" required type="date" />
+          </label>
+          <label>
+            <span>Estado</span>
+            <select defaultValue="cleared" name="status">
+              <option value="cleared">Confirmado</option>
+              <option value="planned">Planejado</option>
+            </select>
+          </label>
+          <label>
+            <span>Vencimento</span>
+            <input name="dueOn" type="date" />
+          </label>
+        </div>
+      </details>
       <div className={styles.formFooter}>
         <p
           aria-live="polite"
@@ -149,7 +144,7 @@ export function TransactionForm({
           data-status={state.status}
           role={state.message ? "status" : undefined}
         >
-          {state.message || "Valores são guardados em centavos, sem arredondamento."}
+          {state.message || "Só valor é obrigatório; abra os detalhes quando precisar."}
         </p>
         <button
           className={styles.primaryButton}

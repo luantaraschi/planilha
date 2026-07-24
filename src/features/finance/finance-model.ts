@@ -201,7 +201,7 @@ export function normalizeTransactionInput(
   | { ok: false; message: string } {
   const accountId = String(formData.get("accountId") ?? "");
   const transactionType = String(formData.get("transactionType") ?? "");
-  const description = String(formData.get("description") ?? "").trim();
+  const rawDescription = String(formData.get("description") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "") || null;
   const amountCents = centsFromLocalizedValue(
     String(formData.get("amount") ?? ""),
@@ -223,7 +223,7 @@ export function normalizeTransactionInput(
   ) {
     return { ok: false, message: "Escolha um tipo de lançamento válido." };
   }
-  if (!description || description.length > 120) {
+  if (rawDescription.length > 120) {
     return {
       ok: false,
       message: "Informe uma descrição de até 120 caracteres.",
@@ -243,8 +243,8 @@ export function normalizeTransactionInput(
     return { ok: false, message: "Escolha um estado válido." };
   }
   if (
-    (transactionType === "income" || transactionType === "expense") &&
-    (!categoryId || !uuidPattern.test(categoryId))
+    categoryId &&
+    !uuidPattern.test(categoryId)
   ) {
     return { ok: false, message: "Escolha uma categoria válida." };
   }
@@ -265,7 +265,15 @@ export function normalizeTransactionInput(
     value: {
       accountId,
       transactionType,
-      description,
+      description:
+        rawDescription ||
+        (transactionType === "income"
+          ? "Entrada"
+          : transactionType === "expense"
+            ? "Saída"
+            : transactionType === "transfer"
+              ? "Transferência"
+              : "Ajuste de saldo"),
       categoryId:
         transactionType === "income" || transactionType === "expense"
           ? categoryId
@@ -508,6 +516,45 @@ export function buildFinanceWorkspace(
     ...ledger,
     selectedAccountId,
     summary: buildMonthlyFinanceSummary(ledger, currentDate, selectedAccountId),
+  };
+}
+
+export function normalizeFinancialAccountInput(formData: FormData):
+  | {
+      ok: true;
+      value: {
+        name: string;
+        accountType: AccountType;
+        openingBalanceCents: number;
+      };
+    }
+  | { ok: false; message: string } {
+  const name = String(formData.get("name") ?? "").trim();
+  const accountType = String(formData.get("accountType") ?? "checking");
+  const openingBalance = String(formData.get("openingBalance") ?? "").trim();
+  const openingBalanceCents = openingBalance
+    ? centsFromLocalizedValue(openingBalance)
+    : 0;
+
+  if (!name || name.length > 80) {
+    return { ok: false, message: "Dê um nome de até 80 caracteres para a conta." };
+  }
+  if (!["checking", "cash", "savings", "credit"].includes(accountType)) {
+    return { ok: false, message: "Escolha um tipo de conta válido." };
+  }
+  if (
+    !Number.isSafeInteger(openingBalanceCents) ||
+    Math.abs(openingBalanceCents) > 999_999_999_999
+  ) {
+    return { ok: false, message: "Informe um saldo inicial válido." };
+  }
+  return {
+    ok: true,
+    value: {
+      name,
+      accountType: accountType as AccountType,
+      openingBalanceCents,
+    },
   };
 }
 

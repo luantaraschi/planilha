@@ -261,6 +261,27 @@
   line-height: 1.4;
 }
 
+.previewNotice a {
+  color: var(--raspberry);
+  font-weight: 800;
+}
+
+.moodNotice {
+  min-height: 1.2rem;
+  margin: 0.55rem 0 0;
+  color: #754154;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.moodNotice[data-status="error"] {
+  color: #843c45;
+}
+
+.moodNotice[data-status="success"] {
+  color: #38633f;
+}
+
 .contentGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(18rem, 0.72fr);
@@ -665,24 +686,11 @@
 .checkList li {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.72rem;
 }
 
-.checkList input {
-  width: 1.15rem;
-  height: 1.15rem;
-  flex: 0 0 auto;
-  margin: 0;
-  accent-color: var(--raspberry);
-}
-
-.checkList input:checked + label {
-  color: var(--clay);
-  text-decoration: line-through;
-  text-decoration-color: rgb(114 94 85 / 55%);
-}
-
-.checkList label {
+.checkList li > span {
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -704,7 +712,7 @@
 
 .habitList li {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.55rem;
   align-items: center;
   color: #5f4c2d;
@@ -719,6 +727,43 @@
 
 .habitList svg {
   flex: 0 0 auto;
+}
+
+.progressForm {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.progressButton {
+  min-height: 2.1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.58rem;
+  color: var(--raspberry);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.65rem 0.65rem 0.28rem 0.65rem;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.habitGarden .progressButton {
+  color: #5f4c2d;
+  background: rgb(255 255 255 / 54%);
+}
+
+.progressButton:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.progressButton:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .brand,

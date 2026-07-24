@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  addCurrentFinancialAccount,
   addCurrentTransaction,
   deleteCurrentTransaction,
   InactiveFinancialAccountError,
   importCurrentTransactions,
 } from "./finance-repository";
 import {
+  normalizeFinancialAccountInput,
   normalizeTransactionInput,
   parseBankStatement,
 } from "./finance-model";
@@ -43,6 +45,25 @@ export async function addTransaction(
 
   revalidatePath("/financas");
   return { status: "success", message: "Lançamento adicionado." };
+}
+
+export async function createFinancialAccount(
+  _previousState: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
+  const normalized = normalizeFinancialAccountInput(formData);
+  if (!normalized.ok) {
+    return { status: "error", message: normalized.message };
+  }
+  if ((await addCurrentFinancialAccount(normalized.value)) !== "added") {
+    return {
+      status: "error",
+      message: "Não foi possível criar a conta. Escolha outro nome.",
+    };
+  }
+  revalidatePath("/");
+  revalidatePath("/financas");
+  return { status: "success", message: "Conta criada." };
 }
 
 export async function importStatement(

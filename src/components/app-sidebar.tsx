@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { GardenIcon, type GardenIconName } from "@/components/garden-icon";
 import { signOut } from "@/features/identity/auth-actions";
+import { AssistantLauncher } from "@/features/ai/assistant-launcher";
 import styles from "@/features/today/today-dashboard.module.css";
 
-type AppSection = "today" | "agenda" | "tasks" | "finance" | "settings";
+type AppSection =
+  | "today"
+  | "agenda"
+  | "tasks"
+  | "finance"
+  | "wellbeing"
+  | "goals"
+  | "notes"
+  | "settings";
 
 const navigation = [
   {
@@ -43,7 +52,7 @@ const navigation = [
     label: "Bem-estar",
     compactLabel: "Bem-estar",
     icon: "wellbeing",
-    href: "/#bem-estar",
+    href: "/bem-estar",
     mobile: "primary",
   },
   {
@@ -51,7 +60,7 @@ const navigation = [
     label: "Metas",
     compactLabel: "Metas",
     icon: "goals",
-    href: "/#rituais",
+    href: "/metas",
     mobile: "secondary",
   },
   {
@@ -59,7 +68,7 @@ const navigation = [
     label: "Notas",
     compactLabel: "Notas",
     icon: "notes",
-    href: "/#quick-capture",
+    href: "/notas",
     mobile: "secondary",
   },
   {
@@ -67,7 +76,7 @@ const navigation = [
     label: "Assistente",
     compactLabel: "Assistente",
     icon: "assistant",
-    href: "/financas#assistente",
+    href: "/#assistente",
     mobile: "secondary",
   },
   {
@@ -202,6 +211,7 @@ export function AppSidebar({ active }: { active: AppSection }) {
           Seu assistente transforma lançamentos em respostas simples.
         </span>
       </p>
+      <AssistantLauncher />
     </aside>
   );
 }

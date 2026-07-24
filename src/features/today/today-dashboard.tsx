@@ -1,5 +1,10 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { GardenIcon } from "@/components/garden-icon";
+import { MoodQuickCheck } from "./mood-quick-check";
+import {
+  HabitProgressAction,
+  PriorityProgressAction,
+} from "./today-progress-actions";
 import { QuickCapture } from "./quick-capture";
 import {
   formatCurrency,
@@ -8,18 +13,6 @@ import {
 } from "./today-model";
 import styles from "./today-dashboard.module.css";
 
-const moods = [
-  { value: "terrible", label: "Muito mal", mouth: "M10 17c2.2-2 5.8-2 8 0" },
-  { value: "bad", label: "Mal", mouth: "M10.5 17c1.8-1.4 5.2-1.4 7 0" },
-  { value: "neutral", label: "Neutro", mouth: "M10.5 16.7h7" },
-  { value: "good", label: "Bem", mouth: "M10.5 15.8c1.8 1.8 5.2 1.8 7 0" },
-  {
-    value: "great",
-    label: "Muito bem",
-    mouth: "M10 15.3c2.2 2.6 5.8 2.6 8 0",
-  },
-] as const;
-
 const timelineLabels = {
   event: "Compromisso",
   task: "Tarefa",
@@ -27,26 +20,9 @@ const timelineLabels = {
   habit: "Hábito",
 } as const;
 
-function MoodGlyph({ mouth }: { mouth: string }) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 28 28">
-      <path
-        d="M14 3.5c6.3 0 10.5 4.1 10.5 10.3 0 6.3-4.2 10.7-10.5 10.7S3.5 20.1 3.5 13.8C3.5 7.6 7.7 3.5 14 3.5Z"
-        fill="currentColor"
-        opacity=".12"
-      />
-      <path d="M9.3 11.6h.1M18.6 11.6h.1" />
-      <path d={mouth} />
-    </svg>
-  );
-}
-
-export function TodayDashboard({
-  snapshot,
-  userId,
-}: {
+export function TodayDashboard({ snapshot }: {
   snapshot: TodaySnapshot;
-  userId: string;
+  userId?: string;
 }) {
   const pendingPriorities = snapshot.priorities.filter(
     (item) => !item.done,
@@ -64,7 +40,6 @@ export function TodayDashboard({
         <QuickCapture
           dateLabel={formatLongDate(snapshot.date, snapshot.timeZone)}
           greeting={`Bom dia, ${snapshot.greetingName}`}
-          userId={userId}
         />
 
         <div className={styles.contentGrid}>
@@ -112,22 +87,9 @@ export function TodayDashboard({
             <fieldset className={styles.mood} id="bem-estar">
               <legend>Como você está?</legend>
               <p>Um check-in rápido ajuda a enxergar seus padrões.</p>
-              <div className={styles.moodOptions}>
-                {moods.map(({ value, label, mouth }) => (
-                  <label key={value}>
-                    <input
-                      aria-describedby="preview-notice"
-                      name="mood"
-                      type="radio"
-                      value={value}
-                    />
-                    <span className={styles.moodGlyph}>
-                      <MoodGlyph mouth={mouth} />
-                    </span>
-                    <span className="sr-only">{label}</span>
-                  </label>
-                ))}
-              </div>
+              <MoodQuickCheck
+                date={snapshot.dateIso ?? snapshot.date.toISOString().slice(0, 10)}
+              />
             </fieldset>
 
             <section
@@ -173,13 +135,12 @@ export function TodayDashboard({
                 </li>
               ) : snapshot.priorities.map((item) => (
                 <li key={item.id}>
-                  <input
-                    aria-describedby="preview-notice"
-                    defaultChecked={item.done}
-                    id={`priority-${item.id}`}
-                    type="checkbox"
+                  <span>{item.title}</span>
+                  <PriorityProgressAction
+                    done={item.done}
+                    taskId={item.id}
+                    title={item.title}
                   />
-                  <label htmlFor={`priority-${item.id}`}>{item.title}</label>
                 </li>
               ))}
             </ul>
@@ -211,6 +172,12 @@ export function TodayDashboard({
                     size={24}
                   />
                   <span>{item.title}</span>
+                  <HabitProgressAction
+                    done={item.done}
+                    habitId={item.id}
+                    occurredOn={snapshot.dateIso ?? snapshot.date.toISOString().slice(0, 10)}
+                    title={item.title}
+                  />
                 </li>
               ))}
             </ul>

@@ -47,7 +47,7 @@ describe("TransactionForm", () => {
     );
 
     expect(
-      screen.getByRole("combobox", { name: "Categoria" }),
+      screen.getByRole("combobox", { name: /Categoria/ }),
     ).toBeInTheDocument();
 
     await user.selectOptions(
@@ -56,7 +56,7 @@ describe("TransactionForm", () => {
     );
 
     expect(
-      screen.queryByRole("combobox", { name: "Categoria" }),
+      screen.queryByRole("combobox", { name: /Categoria/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("combobox", { name: "Conta de destino" }),

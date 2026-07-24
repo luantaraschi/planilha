@@ -12,6 +12,13 @@ type HabitLogRow = {
   status: string;
 };
 
+export type Habit = {
+  id: string;
+  title: string;
+  scheduledTime: string;
+  done: boolean;
+};
+
 export function mergeTodayHabits(
   habits: HabitRow[],
   logs: HabitLogRow[],
@@ -54,4 +61,42 @@ export async function getCurrentTodayHabits(date: string) {
     (habitResult.data ?? []) as HabitRow[],
     (logResult.data ?? []) as HabitLogRow[],
   );
+}
+
+export async function addCurrentHabit(title: string, scheduledTime: string) {
+  const supabase = await createClient();
+  const userId = await getVerifiedUserId(supabase);
+  const { error } = await supabase
+    .from("habits")
+    .insert({ user_id: userId, title, scheduled_time: scheduledTime });
+  return !error;
+}
+
+export async function getCurrentHabits(date: string): Promise<Habit[]> {
+  const habits = await getCurrentTodayHabits(date);
+  return habits.map((habit) => ({
+    id: habit.id,
+    title: habit.title,
+    scheduledTime: habit.time ?? "",
+    done: habit.done,
+  }));
+}
+
+export async function setCurrentHabitStatus(
+  habitId: string,
+  occurredOn: string,
+  status: "completed" | "skipped",
+) {
+  const supabase = await createClient();
+  const userId = await getVerifiedUserId(supabase);
+  const { error } = await supabase.from("habit_logs").upsert(
+    {
+      user_id: userId,
+      habit_id: habitId,
+      occurred_on: occurredOn,
+      status,
+    },
+    { onConflict: "habit_id,user_id,occurred_on" },
+  );
+  return !error;
 }

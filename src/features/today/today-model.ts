@@ -8,6 +8,7 @@ export type TimelineItem = {
 
 export type TodaySnapshot = {
   date: Date;
+  dateIso?: string;
   greetingName: string;
   timeZone: string;
   timeline: TimelineItem[];

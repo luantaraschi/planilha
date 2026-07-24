@@ -204,6 +204,22 @@ export async function addCurrentTransaction(input: TransactionInput) {
   return error ? ("error" as const) : ("added" as const);
 }
 
+export async function addCurrentFinancialAccount(input: {
+  name: string;
+  accountType: AccountType;
+  openingBalanceCents: number;
+}) {
+  const supabase = await createClient();
+  const userId = await getVerifiedUserId(supabase);
+  const { error } = await supabase.from("financial_accounts").insert({
+    user_id: userId,
+    name: input.name,
+    account_type: input.accountType,
+    opening_balance_cents: input.openingBalanceCents,
+  });
+  return error ? ("error" as const) : ("added" as const);
+}
+
 function fingerprint(accountId: string, row: StatementRow) {
   if (row.externalId) return row.externalId;
   return createHash("sha256")
@@ -225,7 +241,19 @@ export async function importCurrentTransactions(
   rows: StatementRow[],
 ) {
   const supabase = await createClient();
-  await getVerifiedUserId(supabase);
+  const userId = await getVerifiedUserId(supabase);
+  const { error: categoryError } = await supabase
+    .from("financial_categories")
+    .upsert(
+      [
+        { user_id: userId, name: "Receita extra", category_type: "income" },
+        { user_id: userId, name: "Outros", category_type: "expense" },
+      ],
+      { onConflict: "user_id,category_type,name" },
+    );
+  if (categoryError) {
+    throw new Error("Não foi possível preparar as categorias do extrato.");
+  }
   const prepared = rows.map((row) => ({
     row,
     fingerprint: fingerprint(accountId, row),

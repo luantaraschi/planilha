@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -586,6 +591,99 @@ export type Database = {
             referencedColumns: ["id", "user_id"]
           },
         ]
+      }
+      mood_entries: {
+        Row: {
+          created_at: string
+          id: string
+          mood: string
+          note: string | null
+          occurred_on: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mood: string
+          note?: string | null
+          occurred_on: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mood?: string
+          note?: string | null
+          occurred_on?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notes: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          pinned: boolean
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      personal_goals: {
+        Row: {
+          area: string
+          completed: boolean
+          created_at: string
+          id: string
+          target_on: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area?: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          target_on?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area?: string
+          completed?: boolean
+          created_at?: string
+          id?: string
+          target_on?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       planning_areas: {
         Row: {

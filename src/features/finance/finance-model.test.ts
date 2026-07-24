@@ -3,6 +3,7 @@ import {
   buildMonthlyFinanceSummary,
   dateInTimeZone,
   formatFinanceCurrency,
+  normalizeFinancialAccountInput,
   normalizeTransactionInput,
   parseBankStatement,
   parseBankStatementCsv,
@@ -338,6 +339,23 @@ describe("normalizeTransactionInput", () => {
     expect(normalizeTransactionInput(formData)).toEqual({
       ok: false,
       message: "Escolha uma conta de destino diferente.",
+    });
+  });
+});
+
+describe("normalizeFinancialAccountInput", () => {
+  it("creates a simple account with an optional initial balance", () => {
+    const formData = new FormData();
+    formData.set("name", "  Conta do dia a dia  ");
+    formData.set("accountType", "checking");
+
+    expect(normalizeFinancialAccountInput(formData)).toEqual({
+      ok: true,
+      value: {
+        name: "Conta do dia a dia",
+        accountType: "checking",
+        openingBalanceCents: 0,
+      },
     });
   });
 });

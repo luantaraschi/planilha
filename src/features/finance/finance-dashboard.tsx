@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GardenIcon } from "@/components/garden-icon";
 import { AccountList } from "./account-list";
-import { FinanceAssistant } from "./finance-assistant";
+import { FinancialAccountForm } from "./financial-account-form";
 import {
   formatFinanceCurrency,
   type FinanceWorkspace,
@@ -188,6 +188,43 @@ export function FinanceDashboard({
         entry.accountId === workspace.selectedAccountId),
   );
   const { summary } = workspace;
+
+  if (workspace.accounts.length === 0) {
+    return (
+      <div className={styles.shell}>
+        <a className={styles.skipLink} href="#conteudo-financeiro">
+          Pular para o conteúdo
+        </a>
+        <AppSidebar active="finance" />
+        <main className={styles.main} id="conteudo-financeiro">
+          <header className={styles.pageHeader}>
+            <div>
+              <p>Seu espaço financeiro começa em branco</p>
+              <h1>Vamos registrar onde seu dinheiro está.</h1>
+              <p>
+                Crie uma conta para lançar gastos ou importar o primeiro extrato.
+              </p>
+            </div>
+            <span aria-hidden="true" className={styles.headerIllustration}>
+              <GardenIcon name="finance" size={54} />
+              <i />
+            </span>
+          </header>
+          <section className={styles.accountSetup}>
+            <div>
+              <GardenIcon name="finance" size={35} />
+              <h2>Primeira conta</h2>
+              <p>
+                Não há conta ou categoria criada por nós. Você decide como seu
+                controle começa.
+              </p>
+            </div>
+            <FinancialAccountForm />
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.shell}>
@@ -418,7 +455,6 @@ export function FinanceDashboard({
           </aside>
         </div>
 
-        <FinanceAssistant workspace={workspace} />
       </main>
     </div>
   );
