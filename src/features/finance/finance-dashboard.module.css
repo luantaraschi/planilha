@@ -929,6 +929,30 @@
   border: 0;
 }
 
+.skipLink,
+.accountSelector select,
+.accountSelector button,
+.formGrid input,
+.formGrid select,
+.importControls select,
+.fileDrop,
+.fileDrop input,
+.moneyInput,
+.primaryButton,
+.secondaryButton,
+.removeButton,
+.suggestions button,
+.chatForm input,
+.chatForm button {
+  min-height: 3rem;
+  box-sizing: border-box;
+}
+
+.skipLink {
+  display: flex;
+  align-items: center;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .primaryButton,
   .secondaryButton,

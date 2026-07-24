@@ -442,3 +442,78 @@ O layout real já foi validado pelo controlador nos três viewports. As novas
 dimensões de 48 px têm contrato automatizado e preservam a estrutura aprovada;
 uma re-medição visual desses controles após o ajuste continua recomendável no
 próximo passe do controlador.
+
+---
+
+## Fechamento do terceiro e último gate
+
+### Contrato geral de alvos interativos
+
+- `src/features/finance/finance-dashboard.module.css`
+  - aplica `min-height: 3rem` e `box-sizing: border-box` a todos os controles
+    visíveis do workspace financeiro: skip link, seletor de conta e Aplicar,
+    inputs e selects do lançamento, seletor e input de importação, valor,
+    ações primária e secundária, Remover, sugestões e controles do chat;
+  - mantém os elementos nativos, seus labels, nomes acessíveis e foco;
+  - o input hidden de identificação da transação não integra o contrato por não
+    ser um alvo interativo visível.
+- `src/features/today/today-dashboard.module.css`
+  - aplica o mesmo mínimo de 48 px à marca, navegação, menu Mais e ações de
+    logout compartilhadas e visíveis em `/financas`;
+  - remove as exceções móveis de 44 px do menu.
+- `src/features/finance/finance-responsive.test.ts`
+  - substitui a cobertura parcial por contratos exaustivos dos controles do
+    workspace e da navegação compartilhada.
+
+### Resumo sem contas ativas
+
+- `src/features/finance/finance-model.ts`
+  - determina a ausência de saldo inicial por `selectedAccounts`, que contém
+    apenas as contas ativas do recorte;
+  - quando todas as contas estão inativas, a confiança fica `partial` e o
+    resumo explica: `Cadastre o saldo inicial de pelo menos uma conta.`
+- `src/features/finance/finance-model.test.ts`
+  - cobre explicitamente o ledger que contém somente contas inativas.
+
+## RED / GREEN do terceiro gate
+
+RED focado:
+
+- `npm test -- src/features/finance/finance-responsive.test.ts src/features/finance/finance-model.test.ts`
+- 2 arquivos e 20 testes;
+- 3 falhas esperadas e 17 passes:
+  - o resumo não informava a ausência de conta ativa;
+  - o workspace não possuía um contrato geral de 48 px;
+  - a navegação compartilhada ainda não possuía o mesmo contrato.
+
+GREEN focado:
+
+- o mesmo comando;
+- 2 arquivos e 20 testes, todos passaram.
+
+## Gates finais do terceiro gate
+
+- `npm test`
+  - 33 arquivos;
+  - 118 testes;
+  - todos passaram.
+- `npm run typecheck`
+  - passou sem erros.
+- `npm run lint`
+  - passou sem erros ou avisos.
+- `npm run build`
+  - build de produção concluído;
+  - `/financas` compilada como rota dinâmica.
+- `git diff --check`
+  - passou; os únicos avisos são a normalização LF/CRLF esperada no Windows.
+- `npm run db:test`
+  - não foi reexecutado porque este gate não altera SQL, schema ou migrações;
+  - a execução mais recente permanece em 4 arquivos e 104 testes aprovados no
+    segundo re-review.
+
+## Preocupação restante do gate final
+
+Não há lacuna conhecida no contrato automatizado: todos os elementos
+interativos visíveis inventariados em `/financas` estão cobertos por um mínimo
+de 48 px. Uma re-medição física pelo controlador pode complementar a evidência
+CSS, sem bloquear o release.

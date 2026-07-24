@@ -6,6 +6,10 @@ const css = readFileSync(
   resolve("src/features/finance/finance-dashboard.module.css"),
   "utf8",
 );
+const navigationCss = readFileSync(
+  resolve("src/features/today/today-dashboard.module.css"),
+  "utf8",
+);
 
 describe("finance tablet layout", () => {
   it("keeps summary and ledger split at the 900px navigation breakpoint", () => {
@@ -29,20 +33,15 @@ describe("finance tablet layout", () => {
     );
   });
 
-  it("keeps frequent tablet controls at least 48px tall", () => {
-    expect(css).toMatch(/\.moneyInput\s*\{[^}]*min-height:\s*3rem/);
+  it("applies the 48px contract to every visible finance control", () => {
     expect(css).toMatch(
-      /\.moneyInput input\s*\{[^}]*min-height:\s*3rem/,
+      /\.skipLink,\s*\.accountSelector select,\s*\.accountSelector button,\s*\.formGrid input,\s*\.formGrid select,\s*\.importControls select,\s*\.fileDrop,\s*\.fileDrop input,\s*\.moneyInput,\s*\.primaryButton,\s*\.secondaryButton,\s*\.removeButton,\s*\.suggestions button,\s*\.chatForm input,\s*\.chatForm button\s*\{[^}]*min-height:\s*3rem/,
     );
-    expect(css).toMatch(
-      /\.primaryButton,\s*\.secondaryButton\s*\{[^}]*min-height:\s*3rem/,
+  });
+
+  it("applies the same contract to navigation visible on finance", () => {
+    expect(navigationCss).toMatch(
+      /\.brand,\s*\.navItem,\s*\.navActive,\s*\.moreSummary,\s*\.moreMenu a,\s*\.moreMenu button,\s*\.signOutButton\s*\{[^}]*min-height:\s*3rem/,
     );
-    expect(css).toMatch(
-      /\.suggestions button\s*\{[^}]*min-height:\s*3rem/,
-    );
-    expect(css).toMatch(
-      /\.chatForm button\s*\{[^}]*width:\s*3rem;[^}]*height:\s*3rem/,
-    );
-    expect(css).toMatch(/\.fileDrop\s*\{[^}]*min-height:\s*3rem/);
   });
 });

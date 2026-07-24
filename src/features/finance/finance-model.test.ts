@@ -275,6 +275,24 @@ describe("buildMonthlyFinanceSummary", () => {
       "Cadastre entradas e contas recorrentes para completar a previsão.",
     );
   });
+
+  it("explains the missing initial balance when every account is inactive", () => {
+    const summary = buildMonthlyFinanceSummary(
+      {
+        ...ledger,
+        accounts: ledger.accounts.map((account) => ({
+          ...account,
+          active: false,
+        })),
+      },
+      "2026-07-24",
+    );
+
+    expect(summary.confidence).toBe("partial");
+    expect(summary.missingInputs).toContain(
+      "Cadastre o saldo inicial de pelo menos uma conta.",
+    );
+  });
 });
 
 describe("normalizeTransactionInput", () => {

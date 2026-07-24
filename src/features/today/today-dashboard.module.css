@@ -680,6 +680,17 @@
   flex: 0 0 auto;
 }
 
+.brand,
+.navItem,
+.navActive,
+.moreSummary,
+.moreMenu a,
+.moreMenu button,
+.signOutButton {
+  min-height: 3rem;
+  box-sizing: border-box;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .navItem,
   .navActive,
@@ -825,7 +836,7 @@
   }
 
   .moreMenu a {
-    min-height: 2.75rem;
+    min-height: 3rem;
     display: flex;
     align-items: center;
     gap: 0.65rem;
@@ -838,7 +849,7 @@
   }
 
   .moreMenu button {
-    min-height: 2.75rem;
+    min-height: 3rem;
     font-size: 0.88rem;
     font-weight: 720;
   }

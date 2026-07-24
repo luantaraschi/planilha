@@ -463,7 +463,7 @@ export function buildMonthlyFinanceSummary(
     ) + 1;
 
   const missingInputs: string[] = [];
-  if (ledger.accounts.length === 0) {
+  if (selectedAccounts.length === 0) {
     missingInputs.push("Cadastre o saldo inicial de pelo menos uma conta.");
   }
   if (budgetRemainingCents === null) {
