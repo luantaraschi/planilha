@@ -59,6 +59,37 @@ export class CdpClient {
   }
 }
 
+export class ResourceRegistry {
+  #closed = false;
+  #dispose;
+  #resources = new Set();
+
+  constructor(dispose) {
+    this.#dispose = dispose;
+  }
+
+  async register(resource) {
+    if (this.#closed) {
+      await this.#dispose(resource);
+      throw new Error("Resource registry is closed");
+    }
+
+    this.#resources.add(resource);
+    return resource;
+  }
+
+  async cleanup() {
+    this.#closed = true;
+    const resources = [...this.#resources];
+    this.#resources.clear();
+    const results = await Promise.allSettled(
+      resources.map((resource) => this.#dispose(resource)),
+    );
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure) throw failure.reason;
+  }
+}
+
 export async function elementCenterAfterScroll(
   evaluate,
   selector,
@@ -79,17 +110,63 @@ export async function elementCenterAfterScroll(
   })()`);
 }
 
+export async function pressEnter(client) {
+  const key = {
+    code: "Enter",
+    key: "Enter",
+    nativeVirtualKeyCode: 13,
+    windowsVirtualKeyCode: 13,
+  };
+  await client.send("Input.dispatchKeyEvent", {
+    ...key,
+    text: "\r",
+    type: "keyDown",
+    unmodifiedText: "\r",
+  });
+  await client.send("Input.dispatchKeyEvent", { ...key, type: "keyUp" });
+}
+
+export async function pressArrow(client, direction) {
+  const keys = {
+    left: { code: "ArrowLeft", keyCode: 37 },
+    right: { code: "ArrowRight", keyCode: 39 },
+  };
+  const arrow = keys[direction];
+  if (!arrow) throw new Error(`Unsupported arrow direction: ${direction}`);
+  const key = {
+    code: arrow.code,
+    key: arrow.code,
+    nativeVirtualKeyCode: arrow.keyCode,
+    windowsVirtualKeyCode: arrow.keyCode,
+  };
+  await client.send("Input.dispatchKeyEvent", {
+    ...key,
+    type: "rawKeyDown",
+  });
+  await client.send("Input.dispatchKeyEvent", { ...key, type: "keyUp" });
+}
+
 export function hasVisibleFocusIndicator({
   focusVisible,
-  focusWithinBoxShadow,
+  focusWithin,
+  focusWithinBorderColorAfter,
+  focusWithinBorderColorBefore,
+  focusWithinBoxShadowAfter,
+  focusWithinBoxShadowBefore,
   outlineStyle,
   outlineWidth,
 }) {
   const hasOutline =
     outlineStyle !== "none" && Number.parseFloat(outlineWidth) > 0;
-  const hasFocusWithinShadow =
-    focusWithinBoxShadow && focusWithinBoxShadow !== "none";
-  return focusVisible && Boolean(hasOutline || hasFocusWithinShadow);
+  const hasFocusWithinChange =
+    focusWithin &&
+    ((focusWithinBorderColorBefore !== undefined &&
+      focusWithinBorderColorAfter !== undefined &&
+      focusWithinBorderColorBefore !== focusWithinBorderColorAfter) ||
+      (focusWithinBoxShadowBefore !== undefined &&
+        focusWithinBoxShadowAfter !== undefined &&
+        focusWithinBoxShadowBefore !== focusWithinBoxShadowAfter));
+  return focusVisible && Boolean(hasOutline || hasFocusWithinChange);
 }
 
 export async function connectCdp(

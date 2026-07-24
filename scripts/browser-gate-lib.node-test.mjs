@@ -4,6 +4,9 @@ import {
   CdpClient,
   elementCenterAfterScroll,
   hasVisibleFocusIndicator,
+  pressArrow,
+  pressEnter,
+  ResourceRegistry,
   withTimeoutCleanup,
 } from "./browser-gate-lib.mjs";
 
@@ -70,6 +73,36 @@ describe("withTimeoutCleanup", () => {
     );
     assert.equal(cleanupCalls, 1);
   });
+
+  it("disposes a resource registered after timeout cleanup", async () => {
+    const disposed = [];
+    const registry = new ResourceRegistry(async (resource) => {
+      disposed.push(resource);
+    });
+    let releaseTask;
+    const taskGate = new Promise((resolve) => {
+      releaseTask = resolve;
+    });
+    let taskPromise;
+
+    await assert.rejects(
+      withTimeoutCleanup(
+        () => {
+          taskPromise = (async () => {
+            await taskGate;
+            await registry.register("late browser");
+          })();
+          return taskPromise;
+        },
+        { cleanup: () => registry.cleanup(), timeoutMs: 10 },
+      ),
+      /execution timed out/,
+    );
+
+    releaseTask();
+    await assert.rejects(taskPromise, /Resource registry is closed/);
+    assert.deepEqual(disposed, ["late browser"]);
+  });
 });
 
 describe("elementCenterAfterScroll", () => {
@@ -95,12 +128,87 @@ describe("elementCenterAfterScroll", () => {
   });
 });
 
+describe("pressEnter", () => {
+  it("sends the text-bearing keyDown Chrome uses for native activation", async () => {
+    const events = [];
+    await pressEnter({
+      send: async (_method, event) => events.push(event),
+    });
+
+    assert.deepEqual(events, [
+      {
+        code: "Enter",
+        key: "Enter",
+        nativeVirtualKeyCode: 13,
+        text: "\r",
+        type: "keyDown",
+        unmodifiedText: "\r",
+        windowsVirtualKeyCode: 13,
+      },
+      {
+        code: "Enter",
+        key: "Enter",
+        nativeVirtualKeyCode: 13,
+        type: "keyUp",
+        windowsVirtualKeyCode: 13,
+      },
+    ]);
+  });
+});
+
+describe("pressArrow", () => {
+  it("sends native left and right arrow key events", async () => {
+    const events = [];
+    const client = {
+      send: async (_method, event) => events.push(event),
+    };
+
+    await pressArrow(client, "right");
+    await pressArrow(client, "left");
+
+    assert.deepEqual(events, [
+      {
+        code: "ArrowRight",
+        key: "ArrowRight",
+        nativeVirtualKeyCode: 39,
+        type: "rawKeyDown",
+        windowsVirtualKeyCode: 39,
+      },
+      {
+        code: "ArrowRight",
+        key: "ArrowRight",
+        nativeVirtualKeyCode: 39,
+        type: "keyUp",
+        windowsVirtualKeyCode: 39,
+      },
+      {
+        code: "ArrowLeft",
+        key: "ArrowLeft",
+        nativeVirtualKeyCode: 37,
+        type: "rawKeyDown",
+        windowsVirtualKeyCode: 37,
+      },
+      {
+        code: "ArrowLeft",
+        key: "ArrowLeft",
+        nativeVirtualKeyCode: 37,
+        type: "keyUp",
+        windowsVirtualKeyCode: 37,
+      },
+    ]);
+  });
+});
+
 describe("hasVisibleFocusIndicator", () => {
   it("accepts an outline on the focused element", () => {
     assert.equal(
       hasVisibleFocusIndicator({
         focusVisible: true,
-        focusWithinBoxShadow: "none",
+        focusWithin: false,
+        focusWithinBorderColorAfter: undefined,
+        focusWithinBorderColorBefore: undefined,
+        focusWithinBoxShadowAfter: undefined,
+        focusWithinBoxShadowBefore: undefined,
         outlineStyle: "solid",
         outlineWidth: "3px",
       }),
@@ -112,7 +220,11 @@ describe("hasVisibleFocusIndicator", () => {
     assert.equal(
       hasVisibleFocusIndicator({
         focusVisible: true,
-        focusWithinBoxShadow: "rgb(0 0 0 / 10%) 0px 13px 38px",
+        focusWithin: true,
+        focusWithinBorderColorAfter: "rgb(113, 51, 74)",
+        focusWithinBorderColorBefore: "rgb(234, 219, 212)",
+        focusWithinBoxShadowAfter: "rgb(0 0 0 / 11%) 0px 13px 38px",
+        focusWithinBoxShadowBefore: "rgb(0 0 0 / 9%) 0px 18px 50px",
         outlineStyle: "none",
         outlineWidth: "0px",
       }),
@@ -120,11 +232,31 @@ describe("hasVisibleFocusIndicator", () => {
     );
   });
 
+  it("rejects an unchanged ambient box shadow", () => {
+    assert.equal(
+      hasVisibleFocusIndicator({
+        focusVisible: true,
+        focusWithin: true,
+        focusWithinBorderColorAfter: "rgb(234, 219, 212)",
+        focusWithinBorderColorBefore: "rgb(234, 219, 212)",
+        focusWithinBoxShadowAfter: "rgb(0 0 0 / 9%) 0px 18px 50px",
+        focusWithinBoxShadowBefore: "rgb(0 0 0 / 9%) 0px 18px 50px",
+        outlineStyle: "none",
+        outlineWidth: "0px",
+      }),
+      false,
+    );
+  });
+
   it("rejects focus without a visible indicator", () => {
     assert.equal(
       hasVisibleFocusIndicator({
         focusVisible: true,
-        focusWithinBoxShadow: "none",
+        focusWithin: false,
+        focusWithinBorderColorAfter: undefined,
+        focusWithinBorderColorBefore: undefined,
+        focusWithinBoxShadowAfter: undefined,
+        focusWithinBoxShadowBefore: undefined,
         outlineStyle: "none",
         outlineWidth: "0px",
       }),

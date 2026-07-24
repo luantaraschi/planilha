@@ -9,6 +9,9 @@ import {
   connectCdp,
   elementCenterAfterScroll,
   hasVisibleFocusIndicator,
+  pressArrow,
+  pressEnter,
+  ResourceRegistry,
   withTimeoutCleanup,
 } from "./browser-gate-lib.mjs";
 
@@ -20,7 +23,7 @@ const CHROME_PATH =
   process.env.CHROME_PATH ??
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const execFileAsync = promisify(execFile);
-const runs = [];
+const runs = new ResourceRegistry(closeRun);
 
 const wait = (milliseconds) =>
   new Promise((resolveWait) => setTimeout(resolveWait, milliseconds));
@@ -233,38 +236,72 @@ async function metrics(client) {
   );
 }
 
-async function assertFocusOrder(client, expectedFocus) {
-  await evaluate(client, "document.activeElement?.blur()");
+async function assertFocusOrder(
+  client,
+  expectedFocus,
+  { advance = pressTab, reset = true, visible = true } = {},
+) {
+  if (reset) {
+    await evaluate(
+      client,
+      `(() => {
+        document.activeElement?.blur();
+        window.__browserGateFocusBaseline = new WeakMap();
+        const focusables = document.querySelectorAll(
+          'a[href], button, input, select, summary, [tabindex]'
+        );
+        for (const element of focusables) {
+          const container = element.closest("label");
+          if (!container) continue;
+          const style = getComputedStyle(container);
+          window.__browserGateFocusBaseline.set(element, {
+            borderColor: style.borderColor,
+            boxShadow: style.boxShadow
+          });
+        }
+      })()`,
+    );
+  }
   const actualFocus = [];
 
   for (const expected of expectedFocus) {
-    await pressTab(client);
+    await advance(client);
     const active = await evaluate(
       client,
-      `({
-        focusVisible: document.activeElement.matches(":focus-visible"),
-        focusWithinBoxShadow: (() => {
-          const container = document.activeElement.closest("label");
-          return container?.matches(":focus-within")
-            ? getComputedStyle(container).boxShadow
-            : "none";
-        })(),
-        id: document.activeElement.id || undefined,
-        name: document.activeElement.getAttribute("name") || undefined,
-        outlineStyle: getComputedStyle(document.activeElement).outlineStyle,
-        outlineWidth: getComputedStyle(document.activeElement).outlineWidth,
-        tag: document.activeElement.tagName,
-        text: document.activeElement.textContent?.replace(/\\s+/g, " ").trim() || undefined,
-        type: document.activeElement.getAttribute("type") || undefined
-      })`,
+      `(() => {
+        const active = document.activeElement;
+        const container = active.closest("label");
+        const containerStyle = container
+          ? getComputedStyle(container)
+          : undefined;
+        const baseline = window.__browserGateFocusBaseline.get(active);
+        return {
+          focusVisible: active.matches(":focus-visible"),
+          focusWithin: container?.matches(":focus-within") ?? false,
+          focusWithinBorderColorAfter: containerStyle?.borderColor,
+          focusWithinBorderColorBefore: baseline?.borderColor,
+          focusWithinBoxShadowAfter: containerStyle?.boxShadow,
+          focusWithinBoxShadowBefore: baseline?.boxShadow,
+          checked: "checked" in active ? active.checked : undefined,
+          id: active.id || undefined,
+          name: active.getAttribute("name") || undefined,
+          outlineStyle: getComputedStyle(active).outlineStyle,
+          outlineWidth: getComputedStyle(active).outlineWidth,
+          tag: active.tagName,
+          text: active.textContent?.replace(/\\s+/g, " ").trim() || undefined,
+          type: active.getAttribute("type") || undefined,
+          value: active.getAttribute("value") || undefined
+        };
+      })()`,
     );
 
     const descriptor = Object.fromEntries(
       Object.keys(expected).map((key) => [key, active[key]]),
     );
-    assert.ok(
+    assert.equal(
       hasVisibleFocusIndicator(active),
-      `No visible focus indicator on ${JSON.stringify(descriptor)}`,
+      visible,
+      `Unexpected focus indicator state on ${JSON.stringify(descriptor)}`,
     );
     assert.deepEqual(descriptor, expected);
     actualFocus.push(descriptor);
@@ -314,7 +351,12 @@ async function replaceText(client, selector, value) {
 
 async function browserRun(zoomSteps) {
   const profile = await mkdtemp(join(tmpdir(), "planner-browser-gate-"));
-  const chrome = spawn(
+  const run = await runs.register({
+    chrome: undefined,
+    client: undefined,
+    profile,
+  });
+  run.chrome = spawn(
     CHROME_PATH,
     [
       "--headless=new",
@@ -328,10 +370,10 @@ async function browserRun(zoomSteps) {
     ],
     { stdio: "ignore", windowsHide: true },
   );
-  const run = { chrome, client: undefined, profile };
-  runs.push(run);
 
-  const launchError = new Promise((_, reject) => chrome.once("error", reject));
+  const launchError = new Promise((_, reject) =>
+    run.chrome.once("error", reject),
+  );
   const [port] = (
     await Promise.race([
       waitForFile(join(profile, "DevToolsActivePort")),
@@ -379,7 +421,7 @@ async function removeProfile(profile) {
 async function closeRun(run) {
   run.client?.close();
   run.client = undefined;
-  if (run.chrome.exitCode === null) {
+  if (run.chrome?.exitCode === null) {
     const exited = new Promise((resolveExit) =>
       run.chrome.once("exit", resolveExit),
     );
@@ -390,9 +432,128 @@ async function closeRun(run) {
 }
 
 async function closeBrowserRuns() {
-  const results = await Promise.allSettled(runs.map(closeRun));
-  const failure = results.find((result) => result.status === "rejected");
-  if (failure) throw failure.reason;
+  await runs.cleanup();
+}
+
+async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
+  const navigationFocus = await assertFocusOrder(client, [
+    { tag: "A", text: "Pular para o conteúdo" },
+    { tag: "A", text: "Hoje" },
+    { tag: "A", text: "Agenda" },
+    { tag: "A", text: "Tarefas" },
+    { tag: "A", text: "Finanças" },
+    { tag: "A", text: "Bem-estar" },
+    { tag: "SUMMARY", text: "Mais" },
+  ]);
+  await pressEnter(client);
+  assert.equal(
+    await evaluate(client, 'document.querySelector("details")?.open'),
+    true,
+  );
+  const contentBeforeMoodFocus = await assertFocusOrder(
+    client,
+    [
+      { tag: "A", text: "Metas" },
+      { tag: "A", text: "Notas" },
+      { tag: "A", text: "Assistente" },
+      { tag: "BUTTON", text: "Sair" },
+      { tag: "BUTTON", text: "Adicionar" },
+      { id: "quick-capture", tag: "INPUT" },
+      {
+        checked: false,
+        name: "mood",
+        tag: "INPUT",
+        type: "radio",
+        value: "terrible",
+      },
+    ],
+    { reset: false },
+  );
+  const arrowRight = (activeClient) => pressArrow(activeClient, "right");
+  const moodArrowFocus = await assertFocusOrder(
+    client,
+    [
+      {
+        checked: true,
+        name: "mood",
+        tag: "INPUT",
+        type: "radio",
+        value: "bad",
+      },
+      {
+        checked: true,
+        name: "mood",
+        tag: "INPUT",
+        type: "radio",
+        value: "neutral",
+      },
+      {
+        checked: true,
+        name: "mood",
+        tag: "INPUT",
+        type: "radio",
+        value: "good",
+      },
+      {
+        checked: true,
+        name: "mood",
+        tag: "INPUT",
+        type: "radio",
+        value: "great",
+      },
+    ],
+    { advance: arrowRight, reset: false },
+  );
+  await assertFocusOrder(
+    client,
+    [
+      {
+        checked: true,
+        name: "mood",
+        tag: "INPUT",
+        type: "radio",
+        value: "terrible",
+      },
+    ],
+    { advance: arrowRight, reset: false },
+  );
+  const priorityFocus = await assertFocusOrder(
+    client,
+    [
+      { id: "priority-documents", tag: "INPUT", type: "checkbox" },
+      { id: "priority-budget", tag: "INPUT", type: "checkbox" },
+      { id: "priority-medicine", tag: "INPUT", type: "checkbox" },
+    ],
+    { reset: false },
+  );
+  await assertFocusOrder(
+    client,
+    [{ tag: "BODY" }],
+    { reset: false, visible: false },
+  );
+  await assertFocusOrder(
+    client,
+    [{ tag: "A", text: "Pular para o conteúdo" }],
+    { reset: false },
+  );
+
+  const todayMetrics = await metrics(client);
+  assert.equal(
+    todayMetrics.devicePixelRatio,
+    expectedDevicePixelRatio,
+  );
+  assert.equal(todayMetrics.visualViewportScale, 1);
+  assert.equal(todayMetrics.clientWidth, todayMetrics.scrollWidth);
+
+  return {
+    focusOrder: [
+      ...navigationFocus,
+      ...contentBeforeMoodFocus,
+      ...moodArrowFocus,
+      ...priorityFocus,
+    ],
+    metrics: todayMetrics,
+  };
 }
 
 async function runBrowserGate(identity) {
@@ -442,20 +603,10 @@ async function runBrowserGate(identity) {
   await click(zoomed.client, 'button[type="submit"]');
   await waitForPath(zoomed.client, "/", "#quick-capture");
 
-  const todayFocus = await assertFocusOrder(zoomed.client, [
-    { tag: "A", text: "Pular para o conteúdo" },
-    { tag: "A", text: "Hoje" },
-    { tag: "A", text: "Agenda" },
-    { tag: "A", text: "Tarefas" },
-    { tag: "A", text: "Finanças" },
-    { tag: "A", text: "Bem-estar" },
-    { tag: "SUMMARY", text: "Mais" },
-    { tag: "BUTTON", text: "Adicionar" },
-    { id: "quick-capture", tag: "INPUT" },
-  ]);
-  const todayMetrics = await metrics(zoomed.client);
-  assert.equal(todayMetrics.devicePixelRatio, loginMetrics.devicePixelRatio);
-  assert.equal(todayMetrics.clientWidth, todayMetrics.scrollWidth);
+  const today = await assertCompleteTodayFocus(
+    zoomed.client,
+    loginMetrics.devicePixelRatio,
+  );
   assert.equal(
     await evaluate(
       zoomed.client,
@@ -490,7 +641,7 @@ async function runBrowserGate(identity) {
             focusOrder: onboardingFocus,
             metrics: onboardingMetrics,
           },
-          today: { focusOrder: todayFocus, metrics: todayMetrics },
+          today,
         },
         zoom100,
       },
@@ -500,25 +651,59 @@ async function runBrowserGate(identity) {
   );
 }
 
+async function runTodayContinuation(credentials) {
+  const zoomed = await browserRun(5);
+  const loginMetrics = await metrics(zoomed.client);
+  await replaceText(zoomed.client, "#email", credentials.email);
+  await replaceText(zoomed.client, "#password", credentials.password);
+  await click(
+    zoomed.client,
+    'form button[type="submit"]:not([data-auth-action])',
+  );
+  await waitForPath(zoomed.client, "/", "#quick-capture");
+  const today = await assertCompleteTodayFocus(
+    zoomed.client,
+    loginMetrics.devicePixelRatio,
+  );
+
+  console.log(JSON.stringify({ continuation: "today", routes: { today } }, null, 2));
+}
+
 assert.equal(
   process.platform,
   "win32",
   "The browser gate currently supports Windows only",
 );
 assertLocalUrl(APP_URL, "APP_URL");
-const supabase = await loadLocalSupabase();
-const identity = {
-  email: `browser-gate-${randomUUID()}@example.com`,
-  id: undefined,
-  password: `Gate-${randomUUID()}-Aa1!`,
-};
+const mode = process.env.BROWSER_GATE_MODE ?? "full";
 
-try {
-  await createLocalIdentity(supabase, identity);
-  await withTimeoutCleanup(() => runBrowserGate(identity), {
+if (mode === "continue-today") {
+  const credentials = {
+    email: process.env.BROWSER_GATE_EMAIL,
+    password: process.env.BROWSER_GATE_PASSWORD,
+  };
+  assert.ok(credentials.email, "BROWSER_GATE_EMAIL is required");
+  assert.ok(credentials.password, "BROWSER_GATE_PASSWORD is required");
+  await withTimeoutCleanup(() => runTodayContinuation(credentials), {
     cleanup: closeBrowserRuns,
     timeoutMs: 60_000,
   });
-} finally {
-  await cleanupLocalIdentity(supabase, identity);
+} else {
+  assert.equal(mode, "full", "Unsupported BROWSER_GATE_MODE");
+  const supabase = await loadLocalSupabase();
+  const identity = {
+    email: `browser-gate-${randomUUID()}@example.com`,
+    id: undefined,
+    password: `Gate-${randomUUID()}-Aa1!`,
+  };
+
+  try {
+    await createLocalIdentity(supabase, identity);
+    await withTimeoutCleanup(() => runBrowserGate(identity), {
+      cleanup: closeBrowserRuns,
+      timeoutMs: 60_000,
+    });
+  } finally {
+    await cleanupLocalIdentity(supabase, identity);
+  }
 }

@@ -58,5 +58,11 @@ as credenciais e a remove ao final, confirmando a ausência em `auth.users`,
 URL local ou o executável do Chrome não estiverem nos padrões. URLs que não
 apontam para loopback são rejeitadas antes da criação da identidade.
 
+Para continuar somente a verificação completa de foco do Today com uma conta
+local já existente, sem criar, alterar ou excluir identidade, defina
+`BROWSER_GATE_MODE=continue-today`, `BROWSER_GATE_EMAIL` e
+`BROWSER_GATE_PASSWORD` no ambiente antes de executar `npm run test:browser`.
+O gate não registra os valores dessas credenciais.
+
 O projeto ainda não possui configuração de Supabase hospedado ou deploy
 remoto.
