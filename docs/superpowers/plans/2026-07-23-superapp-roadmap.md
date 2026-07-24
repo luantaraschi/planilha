@@ -61,4 +61,8 @@ starts.
 
 ## Current detailed plan
 
-`docs/superpowers/plans/2026-07-23-identity-data-core.md`
+`docs/superpowers/plans/2026-07-24-reference-feature-expansion.md`
+
+This program plan incorporates the approved reference audit, adds the tablet
+interaction contract and preserves the rule that each release slice must ship
+as an independently tested vertical change.
