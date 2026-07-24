@@ -1,7 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { FinanceSnapshot } from "./finance-model";
+
+const mocks = vi.hoisted(() => ({
+  askFinanceAssistant: vi.fn(),
+}));
+
+vi.mock("@/features/ai/finance-assistant-actions", () => ({
+  askFinanceAssistant: mocks.askFinanceAssistant,
+}));
+
 import { FinanceAssistant } from "./finance-assistant";
 
 const snapshot: FinanceSnapshot = {
@@ -15,6 +24,12 @@ const snapshot: FinanceSnapshot = {
 
 describe("FinanceAssistant", () => {
   it("responde perguntas usando o panorama financeiro atual", async () => {
+    mocks.askFinanceAssistant.mockResolvedValue({
+      answer:
+        "Seus gastos fixos somam R$ 2.400,00 e representam 80% das despesas do mês.",
+      mode: "online",
+      notice: "",
+    });
     const user = userEvent.setup();
     render(<FinanceAssistant snapshot={snapshot} />);
 
@@ -25,7 +40,8 @@ describe("FinanceAssistant", () => {
     await user.click(screen.getByRole("button", { name: "Enviar pergunta" }));
 
     expect(
-      screen.getByText(/Seus gastos fixos somam R\$\s2\.400,00/),
+      await screen.findByText(/Seus gastos fixos somam R\$\s2\.400,00/),
     ).toBeInTheDocument();
+    expect(screen.getByText(/IA configurada/)).toBeInTheDocument();
   });
 });

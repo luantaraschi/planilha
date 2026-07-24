@@ -87,12 +87,33 @@ describe("finance actions", () => {
     ]);
   });
 
+  it("imports debit transactions from an OFX file", async () => {
+    const formData = new FormData();
+    const contents =
+      "<OFX><STMTTRN><DTPOSTED>20260721<TRNAMT>-32.50<MEMO>Padaria</STMTTRN></OFX>";
+    const file = new File([contents], "extrato.ofx", {
+      type: "application/x-ofx",
+    });
+    Object.defineProperty(file, "text", { value: async () => contents });
+    formData.set("statement", file);
+
+    await expect(
+      importStatement(INITIAL_STATE, formData),
+    ).resolves.toEqual({
+      status: "success",
+      message: "1 lançamento importado.",
+    });
+    expect(mocks.importCurrentExpenses).toHaveBeenCalledWith([
+      expect.objectContaining({ description: "Padaria", amount: 32.5 }),
+    ]);
+  });
+
   it("refuses a missing statement file", async () => {
     await expect(
       importStatement(INITIAL_STATE, new FormData()),
     ).resolves.toEqual({
       status: "error",
-      message: "Escolha um arquivo CSV.",
+      message: "Escolha um arquivo CSV ou OFX.",
     });
   });
 

@@ -680,6 +680,22 @@
   text-align: center;
 }
 
+.assistantAlert {
+  margin: 0 1.15rem 0.7rem;
+  padding-left: 0.65rem;
+  color: #805b45;
+  border-left: 3px solid #d5a04d;
+  font-size: 0.67rem;
+  line-height: 1.4;
+}
+
+.suggestions button:disabled,
+.chatForm input:disabled,
+.chatForm button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .srOnly {
   position: absolute;
   width: 1px;

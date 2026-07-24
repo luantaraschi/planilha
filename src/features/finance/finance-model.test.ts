@@ -3,7 +3,9 @@ import {
   answerFinanceQuestion,
   buildFinanceSnapshot,
   normalizeExpenseInput,
+  parseBankStatement,
   parseBankStatementCsv,
+  parseBankStatementOfx,
   type Expense,
 } from "./finance-model";
 
@@ -122,6 +124,72 @@ describe("parseBankStatementCsv", () => {
     );
 
     expect(result.rows[0]?.description).toBe("Mercado, bairro");
+  });
+});
+
+describe("parseBankStatementOfx", () => {
+  it("imports debit transactions and skips credits from OFX 1.x", () => {
+    const result = parseBankStatementOfx(`
+      OFXHEADER:100
+      DATA:OFXSGML
+      <OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><BANKTRANLIST>
+        <STMTTRN>
+          <TRNTYPE>DEBIT
+          <DTPOSTED>20260722120000[-3:BRT]
+          <TRNAMT>-81.40
+          <FITID>debit-1
+          <NAME>Mercado do bairro
+        </STMTTRN>
+        <STMTTRN>
+          <TRNTYPE>CREDIT
+          <DTPOSTED>20260723
+          <TRNAMT>200.00
+          <FITID>credit-1
+          <MEMO>Pix recebido
+        </STMTTRN>
+      </BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>
+    `);
+
+    expect(result).toEqual({
+      rows: [
+        {
+          description: "Mercado do bairro",
+          amount: 81.4,
+          expenseDate: "2026-07-22",
+          category: "Outros",
+        },
+      ],
+      skipped: 1,
+    });
+  });
+
+  it("uses the memo when an OFX transaction has no name", () => {
+    const result = parseBankStatementOfx(`
+      <OFX><STMTTRN>
+        <DTPOSTED>20260721
+        <TRNAMT>-32.50
+        <MEMO>Padaria Central
+      </STMTTRN></OFX>
+    `);
+
+    expect(result.rows[0]?.description).toBe("Padaria Central");
+  });
+});
+
+describe("parseBankStatement", () => {
+  it("chooses the parser from the statement filename", () => {
+    expect(
+      parseBankStatement(
+        "<OFX><STMTTRN><DTPOSTED>20260721<TRNAMT>-12.30<NAME>Café</STMTTRN></OFX>",
+        "conta.ofx",
+      ).rows,
+    ).toHaveLength(1);
+  });
+
+  it("rejects unsupported statement formats", () => {
+    expect(() => parseBankStatement("", "extrato.pdf")).toThrow(
+      "Use um arquivo CSV ou OFX.",
+    );
   });
 });
 

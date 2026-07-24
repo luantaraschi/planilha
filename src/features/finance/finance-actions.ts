@@ -8,7 +8,7 @@ import {
 } from "./finance-repository";
 import {
   normalizeExpenseInput,
-  parseBankStatementCsv,
+  parseBankStatement,
 } from "./finance-model";
 
 export type FinanceActionState = {
@@ -44,8 +44,12 @@ export async function importStatement(
   formData: FormData,
 ): Promise<FinanceActionState> {
   const file = formData.get("statement");
-  if (!(file instanceof File) || !file.name.toLowerCase().endsWith(".csv")) {
-    return { status: "error", message: "Escolha um arquivo CSV." };
+  const fileName = file instanceof File ? file.name.toLowerCase() : "";
+  if (
+    !(file instanceof File) ||
+    (!fileName.endsWith(".csv") && !fileName.endsWith(".ofx"))
+  ) {
+    return { status: "error", message: "Escolha um arquivo CSV ou OFX." };
   }
   if (file.size > 1_000_000) {
     return {
@@ -55,7 +59,7 @@ export async function importStatement(
   }
 
   try {
-    const parsed = parseBankStatementCsv(await file.text());
+    const parsed = parseBankStatement(await file.text(), file.name);
     if (parsed.rows.length === 0) {
       return {
         status: "error",
@@ -81,7 +85,7 @@ export async function importStatement(
   } catch {
     return {
       status: "error",
-      message: "Não foi possível ler esse extrato CSV.",
+      message: "Não foi possível ler esse extrato CSV ou OFX.",
     };
   }
 }

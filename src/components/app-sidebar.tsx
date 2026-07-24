@@ -3,7 +3,7 @@ import { GardenIcon, type GardenIconName } from "@/components/garden-icon";
 import { signOut } from "@/features/identity/auth-actions";
 import styles from "@/features/today/today-dashboard.module.css";
 
-type AppSection = "today" | "finance";
+type AppSection = "today" | "finance" | "settings";
 
 const navigation = [
   { key: "today", label: "Hoje", icon: "today", href: "/", mobile: "primary" },
@@ -54,6 +54,13 @@ const navigation = [
     label: "Assistente",
     icon: "assistant",
     href: "/financas#assistente",
+    mobile: "secondary",
+  },
+  {
+    key: "settings",
+    label: "Configurações",
+    icon: "settings",
+    href: "/configuracoes",
     mobile: "secondary",
   },
 ] satisfies Array<{

@@ -256,6 +256,83 @@ export function parseBankStatementCsv(text: string) {
   return { rows, skipped };
 }
 
+function ofxField(transaction: string, name: string) {
+  const match = transaction.match(
+    new RegExp(`<${name}>\\s*([^<\\r\\n]+)`, "i"),
+  );
+  return match?.[1]?.trim() ?? "";
+}
+
+function decodeOfxText(value: string) {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'");
+}
+
+export function parseBankStatementOfx(text: string) {
+  const transactions = [
+    ...text.matchAll(
+      /<STMTTRN\b[^>]*>([\s\S]*?)(?:<\/STMTTRN>|(?=<STMTTRN\b|<\/BANKTRANLIST>|<\/OFX>))/gi,
+    ),
+  ];
+  const rows: Array<{
+    description: string;
+    amount: number;
+    expenseDate: string;
+    category: "Outros";
+  }> = [];
+  let skipped = 0;
+
+  for (const match of transactions) {
+    const transaction = match[1];
+    const rawDate = ofxField(transaction, "DTPOSTED");
+    const dateDigits = rawDate.replace(/\D/g, "").slice(0, 8);
+    const expenseDate = dateDigits.length === 8
+      ? `${dateDigits.slice(0, 4)}-${dateDigits.slice(4, 6)}-${dateDigits.slice(6, 8)}`
+      : "";
+    const amount = Number(ofxField(transaction, "TRNAMT").replace(",", "."));
+    const transactionType = normalizeHeader(ofxField(transaction, "TRNTYPE"));
+    const description = decodeOfxText(
+      ofxField(transaction, "NAME") || ofxField(transaction, "MEMO"),
+    );
+    const isCredit =
+      amount > 0 || /credit|dep|directdep|interest/.test(transactionType);
+    const isDebit =
+      amount < 0 ||
+      /debit|check|payment|fee|cash|directdebit/.test(transactionType);
+
+    if (
+      !isValidIsoDate(expenseDate) ||
+      !description ||
+      !Number.isFinite(amount) ||
+      !isDebit ||
+      isCredit
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    rows.push({
+      description: description.slice(0, 120),
+      amount: Math.round(Math.abs(amount) * 100) / 100,
+      expenseDate,
+      category: "Outros",
+    });
+  }
+
+  return { rows, skipped };
+}
+
+export function parseBankStatement(text: string, fileName: string) {
+  const normalizedName = fileName.toLowerCase();
+  if (normalizedName.endsWith(".csv")) return parseBankStatementCsv(text);
+  if (normalizedName.endsWith(".ofx")) return parseBankStatementOfx(text);
+  throw new Error("Use um arquivo CSV ou OFX.");
+}
+
 export function answerFinanceQuestion(
   question: string,
   snapshot: FinanceSnapshot,
