@@ -62,7 +62,7 @@ export function TodayDashboard({
 
       <main className={styles.main} id="conteudo-principal">
         <QuickCapture
-          dateLabel={formatLongDate(snapshot.date)}
+          dateLabel={formatLongDate(snapshot.date, snapshot.timeZone)}
           greeting={`Bom dia, ${snapshot.greetingName}`}
           userId={userId}
         />
@@ -202,7 +202,7 @@ export function TodayDashboard({
             <ul className={styles.habitList}>
               {snapshot.habits.length === 0 ? (
                 <li className={styles.emptyList}>
-                  Hábitos chegam na próxima etapa.
+                  Crie seu primeiro hábito para vê-lo aqui.
                 </li>
               ) : snapshot.habits.map((item) => (
                 <li data-done={item.done} key={item.id}>

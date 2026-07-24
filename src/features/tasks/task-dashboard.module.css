@@ -245,6 +245,21 @@
   gap: .35rem;
 }
 
+.taskActions form {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.transitionStatus {
+  font-size: .75rem;
+  margin: .2rem 0 0;
+  max-width: 13rem;
+}
+
+.transitionStatus:empty { display: none; }
+.transitionStatus[data-status="error"] { color: #8f243e; }
+.transitionStatus[data-status="success"] { color: #426b4f; }
+
 .taskActions button { min-height: 3rem; }
 
 .kanban {

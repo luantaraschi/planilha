@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { CalendarOccurrence } from "./calendar-model";
 import styles from "./calendar-workspace.module.css";
 
@@ -9,10 +10,19 @@ const labels = {
 };
 
 export function OccurrenceItem({
+  href,
   occurrence,
+  timeZone,
 }: {
+  href?: string;
   occurrence: CalendarOccurrence;
+  timeZone: string;
 }) {
+  const title = href ? (
+    <Link href={href}>{occurrence.title}</Link>
+  ) : (
+    occurrence.title
+  );
   return (
     <li className={styles.occurrence} data-kind={occurrence.kind}>
       <time dateTime={occurrence.start}>
@@ -21,12 +31,13 @@ export function OccurrenceItem({
           : new Intl.DateTimeFormat("pt-BR", {
               hour: "2-digit",
               minute: "2-digit",
+              timeZone,
             }).format(new Date(occurrence.start))}
       </time>
       <span aria-hidden="true" className={styles.kindShape} />
       <div>
         <span>{labels[occurrence.kind]}</span>
-        <strong>{occurrence.title}</strong>
+        <strong>{title}</strong>
         {occurrence.location ? <small>{occurrence.location}</small> : null}
       </div>
     </li>
@@ -34,15 +45,26 @@ export function OccurrenceItem({
 }
 
 export function DayView({
+  date,
   occurrences,
+  timeZone,
+  view = "day",
 }: {
+  date: string;
   occurrences: CalendarOccurrence[];
+  timeZone: string;
+  view?: string;
 }) {
   return (
     <ol aria-label="Agenda do dia" className={styles.dayTrail}>
       {occurrences.length ? (
         occurrences.map((item) => (
-          <OccurrenceItem key={item.id} occurrence={item} />
+          <OccurrenceItem
+            href={`/agenda?data=${date}&visao=${view}&selecionado=${encodeURIComponent(item.id)}`}
+            key={item.id}
+            occurrence={item}
+            timeZone={timeZone}
+          />
         ))
       ) : (
         <li className={styles.emptyDay}>

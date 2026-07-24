@@ -7,6 +7,7 @@ describe("CalendarWorkspace", () => {
     render(
       <CalendarWorkspace
         date="2026-07-24"
+        selectedId="stop"
         timeZone="America/Bahia"
         occurrences={[
           {
@@ -46,7 +47,10 @@ describe("CalendarWorkspace", () => {
     }
     expect(screen.getAllByText("Viagem").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Detalhes do dia" })).toBeInTheDocument();
+    expect(
+      screen.getByTestId("selected-occurrence"),
+    ).toHaveTextContent("Poço Azul");
     expect(screen.getByRole("heading", { name: "Roteiro" })).toBeInTheDocument();
-    expect(screen.getAllByText("Poço Azul")).toHaveLength(2);
+    expect(screen.getAllByText("Poço Azul")).toHaveLength(3);
   });
 });

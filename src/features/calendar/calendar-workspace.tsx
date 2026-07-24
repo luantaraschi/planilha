@@ -36,37 +36,60 @@ function AgendaView({
     );
   }
   if (view === "week") {
-    return <WeekView occurrences={occurrences} timeZone={timeZone} />;
+    return (
+      <WeekView date={date} occurrences={occurrences} timeZone={timeZone} />
+    );
   }
   if (view === "list") {
     return (
       <ol aria-label="Lista da agenda" className={styles.dayTrail}>
         {occurrences.map((item) => (
-          <OccurrenceItem key={item.id} occurrence={item} />
+          <OccurrenceItem
+            href={`/agenda?data=${date}&visao=list&selecionado=${encodeURIComponent(item.id)}`}
+            key={item.id}
+            occurrence={item}
+            timeZone={timeZone}
+          />
         ))}
       </ol>
     );
   }
-  return <DayView occurrences={occurrences} />;
+  return (
+    <DayView
+      date={date}
+      occurrences={occurrences}
+      timeZone={timeZone}
+      view={view}
+    />
+  );
 }
 
 export function CalendarWorkspace({
   date,
   occurrences,
+  selectedId,
   timeZone,
   view = "day",
 }: {
   date: string;
   occurrences: CalendarOccurrence[];
+  selectedId?: string;
   timeZone: string;
   view?: CalendarView;
 }) {
   const issues = detectScheduleIssues(occurrences);
   const trips = occurrences.filter((item) => item.kind === "trip");
-  const selected = occurrences[0] ?? null;
-  const itinerary = selected?.kind === "trip"
-    ? occurrences.filter((item) => item.parentEventId === selected.sourceId)
-    : occurrences.filter((item) => item.parentEventId);
+  const selected =
+    occurrences.find(
+      (item) => item.id === selectedId || item.sourceId === selectedId,
+    ) ??
+    occurrences[0] ??
+    null;
+  const selectedTripId =
+    selected?.kind === "trip" ? selected.sourceId : selected?.parentEventId;
+  const itinerary = selectedTripId
+    ? occurrences.filter((item) => item.parentEventId === selectedTripId)
+    : [];
   return (
     <div className={styles.shell}>
       <a className={styles.skipLink} href="#agenda-principal">
@@ -143,7 +166,7 @@ export function CalendarWorkspace({
               <h2>Detalhes do dia</h2>
             </div>
             {selected ? (
-              <>
+              <div data-testid="selected-occurrence">
                 <span data-kind={selected.kind}>
                   {selected.kind === "event"
                     ? "Compromisso"
@@ -164,11 +187,12 @@ export function CalendarWorkspace({
                       ? ` · sincronizado ${new Intl.DateTimeFormat("pt-BR", {
                           hour: "2-digit",
                           minute: "2-digit",
+                          timeZone,
                         }).format(new Date(selected.lastSyncedAt))}`
                       : ""}
                   </small>
                 ) : null}
-              </>
+              </div>
             ) : (
               <p>Escolha um compromisso para ver seus detalhes.</p>
             )}
@@ -184,6 +208,7 @@ export function CalendarWorkspace({
                           day: "2-digit",
                           hour: "2-digit",
                           minute: "2-digit",
+                          timeZone,
                         }).format(new Date(item.start))}
                       </time>
                       <strong>{item.title}</strong>
@@ -194,7 +219,7 @@ export function CalendarWorkspace({
             ) : null}
           </aside>
         </div>
-        <CalendarEventForm timeZone={timeZone} trips={trips} />
+        <CalendarEventForm trips={trips} />
       </main>
     </div>
   );

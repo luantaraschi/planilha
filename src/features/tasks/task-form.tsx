@@ -10,11 +10,9 @@ const initialState: TaskActionState = { status: "idle", message: "" };
 export function TaskForm({
   projects,
   tasks,
-  timeZone,
 }: {
   projects: PlanningProject[];
   tasks: PlanningTask[];
-  timeZone: string;
 }) {
   const [state, action, pending] = useActionState(
     createTaskAction,
@@ -24,7 +22,6 @@ export function TaskForm({
     <details className={styles.taskComposer}>
       <summary>Adicionar tarefa</summary>
       <form action={action}>
-        <input name="timeZone" type="hidden" value={timeZone} />
         <label className={styles.wideField}>
           Título
           <input maxLength={240} name="title" required />

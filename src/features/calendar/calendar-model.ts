@@ -1,4 +1,5 @@
 import { localDateTimeToIso } from "@/lib/date-time";
+import { isSupportedRecurrenceRule } from "@/lib/recurrence";
 
 export type CalendarKind = "event" | "task" | "bill" | "trip";
 export type CalendarView = "day" | "week" | "month" | "list";
@@ -49,8 +50,20 @@ export function groupOccurrencesByDay(
 ) {
   const groups = new Map<string, CalendarOccurrence[]>();
   for (const occurrence of occurrences) {
-    const key = dayKey(occurrence.start, timeZone);
-    groups.set(key, [...(groups.get(key) ?? []), occurrence]);
+    const start = dayKey(occurrence.start, timeZone);
+    const end = dayKey(
+      new Date(Date.parse(occurrence.end) - 1).toISOString(),
+      timeZone,
+    );
+    const cursor = new Date(`${start}T12:00:00Z`);
+    do {
+      const key = cursor.toISOString().slice(0, 10);
+      groups.set(key, [...(groups.get(key) ?? []), occurrence]);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    } while (
+      occurrence.kind === "trip" &&
+      cursor.toISOString().slice(0, 10) <= end
+    );
   }
   if (groups.size === 1) {
     const key = groups.keys().next().value as string;
@@ -87,6 +100,7 @@ export function detectScheduleIssues(occurrences: CalendarOccurrence[]) {
 
 export function normalizeCalendarEvent(
   formData: FormData,
+  timeZone: string,
 ):
   | { ok: true; value: CalendarEventInput }
   | { ok: false; message: string } {
@@ -99,7 +113,6 @@ export function normalizeCalendarEvent(
   const tripStartsOn = String(formData.get("tripStartsOn") ?? "") || null;
   const tripEndsOn = String(formData.get("tripEndsOn") ?? "") || null;
   const parentEventId = String(formData.get("parentEventId") ?? "") || null;
-  const timeZone = String(formData.get("timeZone") ?? "America/Bahia");
   if (!title || title.length > 240) {
     return { ok: false, message: "Informe um título de até 240 caracteres." };
   }
@@ -116,11 +129,12 @@ export function normalizeCalendarEvent(
   }
   if (
     recurrenceRule &&
-    !/^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$/.test(
-      recurrenceRule,
-    )
+    !isSupportedRecurrenceRule(recurrenceRule)
   ) {
-    return { ok: false, message: "Use uma recorrência iCalendar válida." };
+    return {
+      ok: false,
+      message: "A recorrência aceita FREQ, INTERVAL, COUNT, UNTIL e BYDAY.",
+    };
   }
   if (
     eventType === "trip" &&

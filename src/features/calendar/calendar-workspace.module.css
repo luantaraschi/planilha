@@ -328,7 +328,7 @@
   .main { padding: 1.35rem; }
   .workspace { grid-template-columns: minmax(0, 1fr) minmax(15rem, 18rem); }
 }
-@media (max-width: 50rem) {
+@media (max-width: 43.749rem) {
   .toolbar { align-items: stretch; flex-direction: column; }
   .workspace { grid-template-columns: 1fr; }
   .dayDetail { display: none; }

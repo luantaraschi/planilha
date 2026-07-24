@@ -7,6 +7,7 @@ describe("TaskDashboard", () => {
     render(
       <TaskDashboard
         projects={[{ id: "p1", name: "Casa", color: "#A73655", status: "active" }]}
+        timeZone="America/Bahia"
         today="2026-07-24"
         tasks={[{
           id: "t1",

@@ -101,6 +101,7 @@ export async function addCurrentTask(input: TaskInput) {
     project_id: input.projectId,
     parent_task_id: input.parentTaskId,
     recurrence_rule: input.recurrenceRule,
+    timezone: input.timeZone,
   });
   return error ? ("error" as const) : ("added" as const);
 }

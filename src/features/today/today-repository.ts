@@ -4,6 +4,7 @@ import {
 } from "@/features/finance/finance-model";
 import { getCurrentFinanceLedger } from "@/features/finance/finance-repository";
 import { getCalendarOccurrences } from "@/features/calendar/calendar-repository";
+import { getCurrentTodayHabits } from "@/features/habits/habit-repository";
 import { getCurrentTasks } from "@/features/tasks/task-repository";
 import type { TodaySnapshot, TimelineItem } from "./today-model";
 import { localDayWindow } from "@/lib/date-time";
@@ -26,6 +27,7 @@ type OccurrenceInput = {
 type TodayInput = {
   date: Date;
   greetingName: string;
+  timeZone: string;
   occurrences: OccurrenceInput[];
   priorities: TodaySnapshot["priorities"];
   habits: TodaySnapshot["habits"];
@@ -33,13 +35,10 @@ type TodayInput = {
   projectedBalanceCents: number;
 };
 
-const detailTime = new Intl.DateTimeFormat("pt-BR", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "America/Bahia",
-});
-
-function occurrenceDetail(item: OccurrenceInput) {
+function occurrenceDetail(
+  item: OccurrenceInput,
+  detailTime: Intl.DateTimeFormat,
+) {
   if (item.source !== "local") {
     const source = item.source === "google" ? "Google Agenda" : item.source;
     return item.last_synced_at
@@ -56,13 +55,18 @@ function occurrenceDetail(item: OccurrenceInput) {
 }
 
 export function composeTodaySnapshot(input: TodayInput): TodaySnapshot {
+  const detailTime = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: input.timeZone,
+  });
   const occurrenceTimeline = [...input.occurrences].map(
       (item): TimelineItem => ({
         id: item.id,
         time: detailTime.format(new Date(item.starts_at)),
         title: item.title,
         kind: item.kind === "bill" ? "bill" : item.kind === "task" ? "task" : "event",
-        detail: occurrenceDetail(item),
+        detail: occurrenceDetail(item, detailTime),
       }),
     );
   const timeline = [
@@ -82,6 +86,7 @@ export function composeTodaySnapshot(input: TodayInput): TodaySnapshot {
   return {
     date: input.date,
     greetingName: input.greetingName,
+    timeZone: input.timeZone,
     timeline,
     priorities: input.priorities,
     habits: input.habits,
@@ -100,10 +105,11 @@ export async function getCurrentTodaySnapshot({
   const now = new Date();
   const today = dateInTimeZone(now, timeZone);
   const [start, end] = localDayWindow(today, timeZone);
-  const [occurrences, planning, ledger] = await Promise.all([
+  const [occurrences, planning, ledger, habits] = await Promise.all([
     getCalendarOccurrences(start, end),
     getCurrentTasks(),
     getCurrentFinanceLedger(),
+    getCurrentTodayHabits(today),
   ]);
   const priorities = planning.tasks
     .filter(
@@ -112,7 +118,9 @@ export async function getCurrentTodaySnapshot({
         !task.scheduledStart &&
         (task.priority === "high" ||
           task.priority === "medium" ||
-          task.dueAt?.slice(0, 10) === today),
+          (task.dueAt
+            ? dateInTimeZone(new Date(task.dueAt), timeZone) === today
+            : false)),
     )
     .map((task) => ({ id: task.id, title: task.title, done: false }));
   const summary = buildMonthlyFinanceSummary(ledger, today);
@@ -120,6 +128,7 @@ export async function getCurrentTodaySnapshot({
   return composeTodaySnapshot({
     date: now,
     greetingName,
+    timeZone,
     occurrences: occurrences.map((item) => ({
       id: item.id,
       source_id: item.sourceId,
@@ -135,7 +144,7 @@ export async function getCurrentTodaySnapshot({
       parent_event_id: item.parentEventId,
     })),
     priorities,
-    habits: [],
+    habits,
     freeToSpendCents: summary.freePerDayCents ?? 0,
     projectedBalanceCents: summary.projectedEndBalanceCents,
   });

@@ -1,4 +1,5 @@
 import { localDateTimeToIso } from "@/lib/date-time";
+import { isSupportedRecurrenceRule } from "@/lib/recurrence";
 
 export type TaskStatus = "inbox" | "planned" | "completed" | "cancelled";
 export type TaskPriority = "none" | "low" | "medium" | "high";
@@ -33,24 +34,30 @@ export type PlanningProject = {
 export type TaskInput = Omit<
   PlanningTask,
   "id" | "projectName" | "carriedFromTaskId" | "completedAt"
->;
+> & { timeZone: string };
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const rrulePattern =
-  /^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$/;
-
-function localDate(value: string | null) {
-  return value?.slice(0, 10) ?? null;
+function localDate(value: string | null, timeZone: string) {
+  if (!value) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone,
+  }).formatToParts(new Date(value));
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
 }
 
 export function taskSection(
   task: PlanningTask,
   today: string,
+  timeZone = "UTC",
 ): TaskSection {
   if (task.status === "completed") return "completed";
   if (task.status === "inbox") return "inbox";
-  const date = localDate(task.scheduledStart ?? task.dueAt);
+  const date = localDate(task.scheduledStart ?? task.dueAt, timeZone);
   return !date || date <= today ? "today" : "upcoming";
 }
 
@@ -65,6 +72,7 @@ export function buildTaskWorkspace(
   tasks: PlanningTask[],
   projects: PlanningProject[],
   today: string,
+  timeZone = "UTC",
 ) {
   const list = [...tasks].sort(
     (a, b) =>
@@ -86,7 +94,7 @@ export function buildTaskWorkspace(
     sections: Object.fromEntries(
       (["inbox", "today", "upcoming", "completed"] as const).map((section) => [
         section,
-        list.filter((task) => taskSection(task, today) === section),
+        list.filter((task) => taskSection(task, today, timeZone) === section),
       ]),
     ) as Record<TaskSection, PlanningTask[]>,
   };
@@ -99,6 +107,7 @@ function nullableUuid(formData: FormData, name: string) {
 
 export function normalizeTaskInput(
   formData: FormData,
+  timeZone: string,
 ): { ok: true; value: TaskInput } | { ok: false; message: string } {
   const title = String(formData.get("title") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim() || null;
@@ -112,7 +121,6 @@ export function normalizeTaskInput(
   const estimatedMinutes = minutes ? Number(minutes) : null;
   const recurrenceRule =
     String(formData.get("recurrenceRule") ?? "").trim().toUpperCase() || null;
-  const timeZone = String(formData.get("timeZone") ?? "America/Bahia");
 
   if (!title || title.length > 240) {
     return { ok: false, message: "Informe um título de até 240 caracteres." };
@@ -134,7 +142,7 @@ export function normalizeTaskInput(
   ) {
     return { ok: false, message: "A duração deve ficar entre 1 e 1440 minutos." };
   }
-  if (recurrenceRule && !rrulePattern.test(recurrenceRule)) {
+  if (recurrenceRule && !isSupportedRecurrenceRule(recurrenceRule)) {
     return {
       ok: false,
       message: "Use uma recorrência iCalendar iniciada por FREQ=.",
@@ -185,6 +193,7 @@ export function normalizeTaskInput(
       projectId: nullableUuid(formData, "projectId"),
       parentTaskId: nullableUuid(formData, "parentTaskId"),
       recurrenceRule,
+      timeZone,
     },
   };
 }

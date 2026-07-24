@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getCurrentIdentity } from "@/features/identity/identity-repository";
 import { normalizeTaskInput } from "./task-model";
 import {
   addCurrentTask,
@@ -19,7 +20,8 @@ export async function createTaskAction(
   _state: TaskActionState,
   formData: FormData,
 ): Promise<TaskActionState> {
-  const input = normalizeTaskInput(formData);
+  const identity = await getCurrentIdentity();
+  const input = normalizeTaskInput(formData, identity.preferences.timezone);
   if (!input.ok) return { status: "error", message: input.message };
   if ((await addCurrentTask(input.value)) !== "added") {
     return { status: "error", message: "Não foi possível salvar a tarefa." };
@@ -30,20 +32,30 @@ export async function createTaskAction(
   return { status: "success", message: "Tarefa salva." };
 }
 
-export async function transitionTaskAction(formData: FormData) {
+export async function transitionTaskAction(
+  _state: TaskActionState,
+  formData: FormData,
+): Promise<TaskActionState> {
   const taskId = String(formData.get("taskId") ?? "");
   const action = String(formData.get("action") ?? "");
   if (
     !uuidPattern.test(taskId) ||
     !["complete", "undo", "postpone", "tomorrow"].includes(action)
   ) {
-    return;
+    return { status: "error", message: "A ação da tarefa é inválida." };
   }
-  await transitionCurrentTask(
+  const result = await transitionCurrentTask(
     taskId,
     action as "complete" | "undo" | "postpone" | "tomorrow",
   );
+  if (result !== "updated") {
+    return {
+      status: "error",
+      message: "Não foi possível atualizar a tarefa.",
+    };
+  }
   revalidatePath("/");
   revalidatePath("/tarefas");
   revalidatePath("/agenda");
+  return { status: "success", message: "Tarefa atualizada." };
 }

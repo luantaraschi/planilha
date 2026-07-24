@@ -221,7 +221,7 @@ export type Database = {
           recurrence_rule?: string | null
           source?: string
           starts_at: string
-          timezone?: string
+          timezone: string
           title: string
           trip_ends_on?: string | null
           trip_starts_on?: string | null
@@ -401,6 +401,74 @@ export type Database = {
           status?: string
           target_cents?: number
           target_on?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      habit_logs: {
+        Row: {
+          created_at: string
+          habit_id: string
+          id: string
+          occurred_on: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          habit_id: string
+          id?: string
+          occurred_on: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          habit_id?: string
+          id?: string
+          occurred_on?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_logs_habit_fk"
+            columns: ["habit_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          active: boolean
+          created_at: string
+          days_of_week: number[]
+          id: string
+          scheduled_time: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          days_of_week?: number[]
+          id?: string
+          scheduled_time: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          days_of_week?: number[]
+          id?: string
+          scheduled_time?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
@@ -776,6 +844,7 @@ export type Database = {
           scheduled_end: string | null
           scheduled_start: string | null
           status: string
+          timezone: string
           title: string
           updated_at: string
           user_id: string
@@ -795,6 +864,7 @@ export type Database = {
           scheduled_end?: string | null
           scheduled_start?: string | null
           status?: string
+          timezone: string
           title: string
           updated_at?: string
           user_id: string
@@ -814,6 +884,7 @@ export type Database = {
           scheduled_end?: string | null
           scheduled_start?: string | null
           status?: string
+          timezone?: string
           title?: string
           updated_at?: string
           user_id?: string

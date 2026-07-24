@@ -9,6 +9,7 @@ const USER_B = "22222222-2222-4222-8222-222222222222";
 const TODAY_SNAPSHOT: TodaySnapshot = {
   date: new Date("2026-07-23T12:00:00-03:00"),
   greetingName: "Lu",
+  timeZone: "America/Bahia",
   timeline: [
     {
       id: "planning",
@@ -207,6 +208,8 @@ describe("TodayDashboard", () => {
 
     expect(screen.getByText("Seu dia ainda está aberto.")).toBeInTheDocument();
     expect(screen.getByText("Nenhuma prioridade sem horário.")).toBeInTheDocument();
-    expect(screen.getByText("Hábitos chegam na próxima etapa.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Crie seu primeiro hábito para vê-lo aqui."),
+    ).toBeInTheDocument();
   });
 });

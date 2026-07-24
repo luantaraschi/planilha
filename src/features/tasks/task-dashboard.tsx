@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GardenIcon } from "@/components/garden-icon";
-import { transitionTaskAction } from "./task-actions";
 import { TaskForm } from "./task-form";
+import { TaskTransitionForm } from "./task-transition-form";
 import {
   buildTaskWorkspace,
   recurrenceLabel,
@@ -38,18 +38,24 @@ function TaskActions({ task }: { task: PlanningTask }) {
   return (
     <div className={styles.taskActions}>
       {actions.map(([action, label]) => (
-        <form action={transitionTaskAction} key={action}>
-          <input name="taskId" type="hidden" value={task.id} />
-          <button name="action" type="submit" value={action}>
-            {label}
-          </button>
-        </form>
+        <TaskTransitionForm
+          actionName={action}
+          key={action}
+          label={label}
+          taskId={task.id}
+        />
       ))}
     </div>
   );
 }
 
-function TaskRow({ task }: { task: PlanningTask }) {
+function TaskRow({
+  task,
+  timeZone,
+}: {
+  task: PlanningTask;
+  timeZone: string;
+}) {
   const recurrence = recurrenceLabel(task.recurrenceRule);
   const when = task.scheduledStart ?? task.dueAt;
   return (
@@ -76,6 +82,7 @@ function TaskRow({ task }: { task: PlanningTask }) {
                 month: "short",
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone,
               }).format(new Date(when))}
             </time>
           ) : null}
@@ -88,9 +95,11 @@ function TaskRow({ task }: { task: PlanningTask }) {
 
 function TaskCollection({
   tasks,
+  timeZone,
   view,
 }: {
   tasks: PlanningTask[];
+  timeZone: string;
   view: TaskView;
 }) {
   if (!tasks.length) {
@@ -111,7 +120,9 @@ function TaskCollection({
             <ul>
               {tasks
                 .filter((task) => task.priority === priority)
-                .map((task) => <TaskRow key={task.id} task={task} />)}
+                .map((task) => (
+                  <TaskRow key={task.id} task={task} timeZone={timeZone} />
+                ))}
             </ul>
           </section>
         ))}
@@ -120,7 +131,9 @@ function TaskCollection({
   }
   return (
     <ol className={view === "timeline" ? styles.taskTimeline : styles.taskList}>
-      {tasks.map((task) => <TaskRow key={task.id} task={task} />)}
+      {tasks.map((task) => (
+        <TaskRow key={task.id} task={task} timeZone={timeZone} />
+      ))}
     </ol>
   );
 }
@@ -130,17 +143,17 @@ export function TaskDashboard({
   section = "today",
   tasks,
   today,
-  timeZone = "America/Bahia",
+  timeZone,
   view = "list",
 }: {
   projects: PlanningProject[];
   section?: TaskSection;
   tasks: PlanningTask[];
   today: string;
-  timeZone?: string;
+  timeZone: string;
   view?: TaskView;
 }) {
-  const workspace = buildTaskWorkspace(tasks, projects, today);
+  const workspace = buildTaskWorkspace(tasks, projects, today, timeZone);
   const selected = workspace.sections[section];
   return (
     <div className={styles.shell}>
@@ -195,8 +208,8 @@ export function TaskDashboard({
           </nav>
         </div>
 
-        <TaskCollection tasks={selected} view={view} />
-        <TaskForm projects={projects} tasks={tasks} timeZone={timeZone} />
+        <TaskCollection tasks={selected} timeZone={timeZone} view={view} />
+        <TaskForm projects={projects} tasks={tasks} />
       </main>
     </div>
   );

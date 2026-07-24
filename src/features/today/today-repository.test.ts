@@ -6,6 +6,7 @@ describe("today repository", () => {
     const snapshot = composeTodaySnapshot({
       date: new Date("2026-07-24T12:00:00-03:00"),
       greetingName: "Luan",
+      timeZone: "America/Bahia",
       occurrences: [
         { id: "bill", source_id: "bill", kind: "bill", title: "Internet", starts_at: "2026-07-24T17:00:00-03:00", ends_at: "2026-07-24T17:30:00-03:00", all_day: false, location: null, source: "local", last_synced_at: null, estimated_minutes: null, parent_event_id: null },
         { id: "event", source_id: "event", kind: "event", title: "Reunião", starts_at: "2026-07-24T09:00:00-03:00", ends_at: "2026-07-24T10:00:00-03:00", all_day: false, location: "Sala 2", source: "google", last_synced_at: "2026-07-24T08:00:00-03:00", estimated_minutes: null, parent_event_id: null },

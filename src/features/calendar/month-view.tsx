@@ -1,4 +1,8 @@
-import { dayKey, type CalendarOccurrence } from "./calendar-model";
+import Link from "next/link";
+import {
+  groupOccurrencesByDay,
+  type CalendarOccurrence,
+} from "./calendar-model";
 import styles from "./calendar-workspace.module.css";
 
 export function MonthView({
@@ -17,19 +21,22 @@ export function MonthView({
     day.setUTCDate(start.getUTCDate() + index);
     return day.toISOString().slice(0, 10);
   });
+  const grouped = groupOccurrencesByDay(occurrences, timeZone);
   return (
     <div className={styles.month} role="grid" aria-label="Mês">
       {days.map((day) => {
-        const items = occurrences.filter(
-          (item) => dayKey(item.start, timeZone) === day,
-        );
+        const items = grouped.get(day) ?? [];
         return (
           <section aria-label={day} key={day} role="gridcell">
             <time dateTime={day}>{Number(day.slice(-2))}</time>
             <ul>
               {items.slice(0, 3).map((item) => (
                 <li data-kind={item.kind} key={item.id}>
-                  {item.title}
+                  <Link
+                    href={`/agenda?data=${date}&visao=month&selecionado=${encodeURIComponent(item.id)}`}
+                  >
+                    {item.title}
+                  </Link>
                 </li>
               ))}
             </ul>

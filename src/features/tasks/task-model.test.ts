@@ -52,7 +52,7 @@ describe("task model", () => {
     form.set("projectId", "20000000-0000-4000-8000-000000000002");
     form.set("parentTaskId", "30000000-0000-4000-8000-000000000003");
 
-    expect(normalizeTaskInput(form)).toEqual({
+    expect(normalizeTaskInput(form, "America/Bahia")).toEqual({
       ok: true,
       value: expect.objectContaining({
         title: "Fazer revisão",
@@ -70,7 +70,7 @@ describe("task model", () => {
     form.set("title", "Rotina");
     form.set("priority", "none");
     form.set("recurrenceRule", "toda sexta");
-    expect(normalizeTaskInput(form)).toEqual({
+    expect(normalizeTaskInput(form, "America/Bahia")).toEqual({
       ok: false,
       message: "Use uma recorrência iCalendar iniciada por FREQ=.",
     });
@@ -81,13 +81,23 @@ describe("task model", () => {
     form.set("title", "Enviar proposta");
     form.set("priority", "high");
     form.set("dueAt", "2026-07-24T09:00");
-    form.set("timeZone", "America/Bahia");
+    form.set("timeZone", "Pacific/Kiritimati");
 
-    expect(normalizeTaskInput(form)).toEqual({
+    expect(normalizeTaskInput(form, "America/Bahia")).toEqual({
       ok: true,
       value: expect.objectContaining({
         dueAt: "2026-07-24T12:00:00.000Z",
       }),
     });
+  });
+
+  it("classifica o prazo pelo dia local do perfil, não pelo dia UTC", () => {
+    expect(
+      taskSection(
+        task({ dueAt: "2026-07-25T01:30:00.000Z" }),
+        "2026-07-24",
+        "America/Bahia",
+      ),
+    ).toBe("today");
   });
 });

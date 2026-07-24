@@ -9,6 +9,7 @@ export type TimelineItem = {
 export type TodaySnapshot = {
   date: Date;
   greetingName: string;
+  timeZone: string;
   timeline: TimelineItem[];
   priorities: Array<{ id: string; title: string; done: boolean }>;
   habits: Array<{ id: string; title: string; done: boolean; time?: string }>;
@@ -23,11 +24,11 @@ export function formatCurrency(valueInCents: number) {
   }).format(valueInCents / 100);
 }
 
-export function formatLongDate(date: Date) {
+export function formatLongDate(date: Date, timeZone: string) {
   return new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
     day: "numeric",
     month: "long",
-    timeZone: "America/Bahia",
+    timeZone,
   }).format(date);
 }

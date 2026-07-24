@@ -49,15 +49,30 @@ describe("calendar model", () => {
     form.set("eventType", "event");
     form.set("startsAt", "2026-07-24T09:00");
     form.set("endsAt", "2026-07-24T10:00");
-    form.set("timeZone", "America/Bahia");
+    form.set("timeZone", "Pacific/Kiritimati");
 
-    expect(normalizeCalendarEvent(form)).toEqual({
+    expect(normalizeCalendarEvent(form, "America/Bahia")).toEqual({
       ok: true,
       value: expect.objectContaining({
         startsAt: "2026-07-24T12:00:00.000Z",
         endsAt: "2026-07-24T13:00:00.000Z",
         timeZone: "America/Bahia",
       }),
+    });
+  });
+
+  it("rejeita componentes RRULE que a expansão não suporta", () => {
+    const form = new FormData();
+    form.set("title", "Fechamento");
+    form.set("eventType", "event");
+    form.set("startsAt", "2026-07-24T09:00");
+    form.set("endsAt", "2026-07-24T10:00");
+    form.set("recurrenceRule", "FREQ=MONTHLY;BYMONTHDAY=24");
+
+    expect(normalizeCalendarEvent(form, "America/Bahia")).toEqual({
+      ok: false,
+      message:
+        "A recorrência aceita FREQ, INTERVAL, COUNT, UNTIL e BYDAY.",
     });
   });
 });

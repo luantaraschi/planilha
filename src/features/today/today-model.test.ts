@@ -10,7 +10,12 @@ describe("today model", () => {
   });
 
   it("formata a data de referência em português", () => {
-    expect(formatLongDate(new Date("2026-07-23T12:00:00-03:00"))).toBe(
+    expect(
+      formatLongDate(
+        new Date("2026-07-23T12:00:00-03:00"),
+        "America/Bahia",
+      ),
+    ).toBe(
       "quinta-feira, 23 de julho",
     );
   });

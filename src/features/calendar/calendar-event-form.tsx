@@ -12,10 +12,8 @@ const initialState: CalendarActionState = { status: "idle", message: "" };
 
 export function CalendarEventForm({
   trips,
-  timeZone,
 }: {
   trips: CalendarOccurrence[];
-  timeZone: string;
 }) {
   const [state, action, pending] = useActionState(
     createCalendarEvent,
@@ -25,7 +23,6 @@ export function CalendarEventForm({
     <details className={styles.eventComposer}>
       <summary>Adicionar à agenda</summary>
       <form action={action}>
-        <input name="timeZone" type="hidden" value={timeZone} />
         <label className={styles.wideField}>
           Título
           <input maxLength={240} name="title" required />
