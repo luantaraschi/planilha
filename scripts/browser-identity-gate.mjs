@@ -199,6 +199,77 @@ async function cleanupLocalIdentity(supabase, identity) {
   }
 }
 
+async function seedLocalPlanning(identity) {
+  assertLocalUserId(identity.id);
+  await runLocalSql(`
+    insert into public.tasks (
+      user_id, title, status, priority, due_at, scheduled_start,
+      scheduled_end
+    )
+    select
+      '${identity.id}',
+      'Tarefa browser',
+      'planned',
+      'low',
+      (
+        timezone(preference.timezone, now())::date + time '14:00'
+      ) at time zone preference.timezone,
+      (
+        timezone(preference.timezone, now())::date + time '14:00'
+      ) at time zone preference.timezone,
+      (
+        timezone(preference.timezone, now())::date + time '14:30'
+      ) at time zone preference.timezone
+    from public.preferences preference
+    where preference.user_id = '${identity.id}';
+
+    insert into public.events (
+      id, user_id, event_type, title, starts_at, ends_at,
+      trip_starts_on, trip_ends_on
+    )
+    select
+      '73000000-0000-4000-8000-000000000001',
+      '${identity.id}',
+      'trip',
+      'Viagem browser',
+      (
+        timezone(preference.timezone, now())::date + time '08:00'
+      ) at time zone preference.timezone,
+      (
+        timezone(preference.timezone, now())::date + 2 + time '18:00'
+      ) at time zone preference.timezone,
+      timezone(preference.timezone, now())::date,
+      timezone(preference.timezone, now())::date + 2
+    from public.preferences preference
+    where preference.user_id = '${identity.id}';
+
+    insert into public.events (
+      user_id, parent_event_id, event_type, title, starts_at, ends_at
+    )
+    select
+      '${identity.id}',
+      '73000000-0000-4000-8000-000000000001',
+      'event',
+      'Parada browser',
+      (
+        timezone(preference.timezone, now())::date + time '11:00'
+      ) at time zone preference.timezone,
+      (
+        timezone(preference.timezone, now())::date + time '12:00'
+      ) at time zone preference.timezone
+    from public.preferences preference
+    where preference.user_id = '${identity.id}';
+
+    insert into public.habits (
+      user_id, title, scheduled_time
+    ) values (
+      '${identity.id}',
+      'Alongar browser',
+      '07:30'
+    );
+  `);
+}
+
 async function waitForFile(path) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {
@@ -232,6 +303,21 @@ async function waitForPath(client, pathname, selector) {
     await wait(50);
   }
   throw new Error(`Page did not load: ${pathname}`);
+}
+
+async function waitForText(client, text) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    if (
+      await evaluate(
+        client,
+        `document.body.innerText.includes(${JSON.stringify(text)})`,
+      )
+    ) {
+      return;
+    }
+    await wait(50);
+  }
+  throw new Error(`Page did not render text: ${text}`);
 }
 
 async function pressTab(client) {
@@ -615,6 +701,121 @@ async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
   };
 }
 
+async function inspectPlanningRoutes(client) {
+  const snapshots = [];
+  for (const width of [360, 800, 1280]) {
+    await client.send("Emulation.setDeviceMetricsOverride", {
+      deviceScaleFactor: 1,
+      height: 1000,
+      mobile: false,
+      width,
+    });
+
+    await client.send("Page.navigate", {
+      url: new URL("/", ROOT_URL).href,
+    });
+    await wait(300);
+    await waitForPath(client, "/", "#quick-capture");
+    await waitForText(client, "Alongar browser");
+    const today = await evaluate(
+      client,
+      `({
+        bodyText: document.body.innerText,
+        hasHabit: document.body.innerText.includes("Alongar browser"),
+        hasStub: document.body.innerText.includes("próxima etapa"),
+        overflow: document.documentElement.scrollWidth >
+          document.documentElement.clientWidth
+      })`,
+    );
+    assert.equal(today.hasHabit, true, today.bodyText);
+    assert.equal(today.hasStub, false);
+    assert.equal(today.overflow, false);
+    delete today.bodyText;
+
+    await client.send("Page.navigate", {
+      url: new URL("/agenda?visao=week", ROOT_URL).href,
+    });
+    await wait(300);
+    await waitForPath(client, "/agenda", "main h1");
+    await waitForText(client, "Parada browser");
+    const agenda = await evaluate(
+      client,
+      `(() => {
+        const sheet = document.querySelector('section[aria-label="Semana"]');
+        const detail = [...document.querySelectorAll("aside")].find(
+          (item) => item.querySelector("h2")?.textContent === "Detalhes do dia"
+        );
+        const selection = [...document.querySelectorAll(
+          'a[href*="selecionado="]'
+        )].find((link) => link.textContent.includes("Parada browser"));
+        return {
+          days: sheet?.querySelectorAll(":scope > div > section > h2").length,
+          detailVisible: detail ? getComputedStyle(detail).display !== "none" : false,
+          overflow: document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+          selectionHref: selection?.getAttribute("href"),
+          selectionText: selection?.textContent?.trim()
+        };
+      })()`,
+    );
+    assert.equal(agenda.days, 7);
+    assert.equal(agenda.overflow, false);
+    assert.equal(typeof agenda.selectionHref, "string");
+    if (width >= 800) assert.equal(agenda.detailVisible, true);
+
+    await client.send("Page.navigate", {
+      url: new URL(agenda.selectionHref, ROOT_URL).href,
+    });
+    await wait(300);
+    await waitForPath(client, "/agenda", '[data-testid="selected-occurrence"]');
+    await waitForText(client, "Parada browser");
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      if (
+        await evaluate(
+          client,
+          `location.search.includes("selecionado=") &&
+           document.querySelector('[data-testid="selected-occurrence"]')
+             .innerText.includes("Parada browser")`,
+        )
+      ) {
+        break;
+      }
+      if (attempt === 99) throw new Error("Agenda selection did not update");
+      await wait(50);
+    }
+    assert.equal(
+      await evaluate(
+        client,
+        `document.querySelector('[data-testid="selected-occurrence"]')
+          .innerText.includes(${JSON.stringify(agenda.selectionText)})`,
+      ),
+      true,
+    );
+
+    await client.send("Page.navigate", {
+      url: new URL("/tarefas", ROOT_URL).href,
+    });
+    await wait(300);
+    await waitForPath(client, "/tarefas", "main h1");
+    await waitForText(client, "Tarefa browser");
+    const tasks = await evaluate(
+      client,
+      `({
+        hasTask: document.body.innerText.includes("Tarefa browser"),
+        hasUntrustedTimezoneField:
+          document.querySelector('input[name="timeZone"]') !== null,
+        overflow: document.documentElement.scrollWidth >
+          document.documentElement.clientWidth
+      })`,
+    );
+    assert.equal(tasks.hasTask, true);
+    assert.equal(tasks.hasUntrustedTimezoneField, false);
+    assert.equal(tasks.overflow, false);
+    snapshots.push({ agenda, tasks, today, width });
+  }
+  return snapshots;
+}
+
 async function runBrowserGate(supabase, identity) {
   const baseline = await browserRun(0);
   const zoomed = await browserRun(5);
@@ -737,6 +938,8 @@ async function runBrowserGate(supabase, identity) {
   );
   await waitForPath(baseline.client, "/", "#quick-capture");
   const responsive = await runResponsiveGate(baseline.client);
+  await seedLocalPlanning(identity);
+  const planning = await inspectPlanningRoutes(baseline.client);
 
   if (SCREENSHOT_PATH) {
     await baseline.client.send("Emulation.setDeviceMetricsOverride", {
@@ -769,6 +972,7 @@ async function runBrowserGate(supabase, identity) {
           today,
         },
         responsive,
+        planning,
         zoom100,
       },
       null,
