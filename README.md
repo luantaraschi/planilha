@@ -4,7 +4,7 @@ Planner pessoal em Next.js com autenticação e dados locais no Supabase.
 
 ## Desenvolvimento local
 
-Pré-requisitos: Node.js 20+ e Docker Desktop em execução.
+Pré-requisitos: Node.js 22+ e Docker Desktop em execução.
 
 ```powershell
 npm install
@@ -50,8 +50,13 @@ npm audit
 npm run build
 ```
 
-`npm run test:browser` exige o app local ativo e Google Chrome. Use
-`APP_URL`/`CHROME_PATH` se a URL ou o executável não estiverem nos padrões.
+`npm run test:browser` é suportado no Windows com Node.js 22+, Docker Desktop,
+Supabase local, app local ativo e Google Chrome. O gate usa os atalhos e
+códigos de tecla do Windows, cria uma identidade local efêmera sem registrar
+as credenciais e a remove ao final, confirmando a ausência em `auth.users`,
+`profiles`, `preferences` e `audit_events`. Use `APP_URL`/`CHROME_PATH` se a
+URL local ou o executável do Chrome não estiverem nos padrões. URLs que não
+apontam para loopback são rejeitadas antes da criação da identidade.
 
 O projeto ainda não possui configuração de Supabase hospedado ou deploy
 remoto.
