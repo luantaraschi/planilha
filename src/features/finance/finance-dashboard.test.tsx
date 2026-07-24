@@ -75,6 +75,7 @@ const workspace: FinanceWorkspace = {
       categoryId: "20000000-0000-4000-8000-000000000002",
       frequency: "monthly",
       nextDueOn: "2026-07-28",
+      dueDay: 28,
       active: true,
     },
   ],
@@ -153,5 +154,42 @@ describe("FinanceDashboard", () => {
     expect(
       screen.getByRole("heading", { name: "Revisar extrato" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows transfer endpoints and keeps imported history non-destructive", () => {
+    render(
+      <FinanceDashboard
+        defaultDate="2026-07-24"
+        greetingName="Lu"
+        monthLabel="julho de 2026"
+        workspace={{
+          ...workspace,
+          transactions: [
+            {
+              ...workspace.transactions[0],
+              id: "30000000-0000-4000-8000-000000000009",
+              description: "Extrato protegido",
+              source: "bank_import",
+            },
+            {
+              ...workspace.transactions[0],
+              id: "30000000-0000-4000-8000-000000000010",
+              description: "Guardar na reserva",
+              transactionType: "transfer",
+              categoryId: null,
+              categoryName: null,
+              transferAccountId:
+                "10000000-0000-4000-8000-000000000002",
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Conta principal → Reserva")).toBeInTheDocument();
+    expect(screen.getByText("Preservado no histórico")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Remover Extrato protegido" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   getVerifiedUserId: vi.fn(),
   from: vi.fn(),
+  rpc: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -15,6 +16,7 @@ vi.mock("@/features/identity/identity-repository", () => ({
 
 import {
   addCurrentTransaction,
+  deleteCurrentTransaction,
   getCurrentFinanceLedger,
   importCurrentTransactions,
 } from "./finance-repository";
@@ -22,7 +24,7 @@ import {
 describe("finance repository", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mocks.createClient.mockResolvedValue({ from: mocks.from });
+    mocks.createClient.mockResolvedValue({ from: mocks.from, rpc: mocks.rpc });
     mocks.getVerifiedUserId.mockResolvedValue(
       "10000000-0000-4000-8000-000000000001",
     );
@@ -132,65 +134,10 @@ describe("finance repository", () => {
     });
   });
 
-  it("imports credits and debits, retaining duplicate review rows", async () => {
-    const transactionInsert = vi.fn(() => ({
-      select: async () => ({
-        data: [
-          { id: "new-income", import_fingerprint: "income-fingerprint" },
-        ],
-        error: null,
-      }),
-    }));
-    const reviewInsert = vi.fn().mockResolvedValue({ error: null });
-    const batchUpdateEqUser = vi.fn().mockResolvedValue({ error: null });
-    const batchUpdateEqId = vi.fn(() => ({ eq: batchUpdateEqUser }));
-    const batchUpdate = vi.fn(() => ({ eq: batchUpdateEqId }));
-
-    mocks.from.mockImplementation((table: string) => {
-      if (table === "financial_categories") {
-        return {
-          select: () => ({
-            eq: () => ({
-              in: async () => ({
-                data: [
-                  { id: "income-category", name: "Receita extra" },
-                  { id: "expense-category", name: "Outros" },
-                ],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === "import_batches") {
-        return {
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: { id: "batch-1" },
-                error: null,
-              }),
-            }),
-          }),
-          update: batchUpdate,
-        };
-      }
-      if (table === "transactions") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                in: async () => ({
-                  data: [{ import_fingerprint: "expense-fingerprint" }],
-                  error: null,
-                }),
-              }),
-            }),
-          }),
-          insert: transactionInsert,
-        };
-      }
-      return { insert: reviewInsert };
+  it("confirms credits and debits in one atomic RPC", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: [{ imported_count: 1, duplicate_count: 1 }],
+      error: null,
     });
 
     const result = await importCurrentTransactions(
@@ -217,78 +164,33 @@ describe("finance repository", () => {
     );
 
     expect(result).toEqual({ imported: 1, duplicates: 1 });
-    expect(transactionInsert).toHaveBeenCalledWith([
-      expect.objectContaining({
-        transaction_type: "income",
-        amount_cents: 20_000,
-        category_id: "income-category",
-      }),
-    ]);
-    expect(reviewInsert).toHaveBeenCalledWith([
-      expect.objectContaining({ review_status: "duplicate" }),
-      expect.objectContaining({ review_status: "imported" }),
-    ]);
-    expect(batchUpdate).toHaveBeenCalledWith({
-      status: "completed",
-      imported_count: 1,
-      duplicate_count: 1,
+    expect(mocks.rpc).toHaveBeenCalledWith("confirm_statement_import", {
+      account_id_input: "account-1",
+      confirmation_key_input: expect.stringMatching(/^[a-f0-9]{64}$/),
+      file_name_input: "extrato.csv",
+      file_type_input: "csv",
+      rows_input: [
+        expect.objectContaining({
+          amount_cents: 3_250,
+          import_fingerprint: "expense-fingerprint",
+          row_number: 2,
+          transaction_type: "expense",
+        }),
+        expect.objectContaining({
+          amount_cents: 20_000,
+          import_fingerprint: "income-fingerprint",
+          row_number: 3,
+          transaction_type: "income",
+        }),
+      ],
     });
+    expect(mocks.from).not.toHaveBeenCalled();
   });
 
-  it("marks only the repeated row as duplicate within one file", async () => {
-    const reviewInsert = vi.fn().mockResolvedValue({ error: null });
-    const transactionInsert = vi.fn(() => ({
-      select: async () => ({
-        data: [{ id: "new-income", import_fingerprint: "same-fitid" }],
-        error: null,
-      }),
-    }));
-    mocks.from.mockImplementation((table: string) => {
-      if (table === "financial_categories") {
-        return {
-          select: () => ({
-            eq: () => ({
-              in: async () => ({
-                data: [
-                  { id: "income-category", name: "Receita extra" },
-                  { id: "expense-category", name: "Outros" },
-                ],
-                error: null,
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === "import_batches") {
-        return {
-          insert: () => ({
-            select: () => ({
-              single: async () => ({
-                data: { id: "batch-1" },
-                error: null,
-              }),
-            }),
-          }),
-          update: () => ({
-            eq: () => ({
-              eq: async () => ({ error: null }),
-            }),
-          }),
-        };
-      }
-      if (table === "transactions") {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                in: async () => ({ data: [], error: null }),
-              }),
-            }),
-          }),
-          insert: transactionInsert,
-        };
-      }
-      return { insert: reviewInsert };
+  it("sends a deterministic key and lets the RPC review repeated rows", async () => {
+    mocks.rpc.mockResolvedValue({
+      data: [{ imported_count: 1, duplicate_count: 1 }],
+      error: null,
     });
     const repeatedRow = {
       description: "Pix recebido",
@@ -298,20 +200,50 @@ describe("finance repository", () => {
       externalId: "same-fitid",
     };
 
+    const first = await importCurrentTransactions("account-1", "extrato.ofx", [
+      { ...repeatedRow, rowNumber: 1 },
+      { ...repeatedRow, rowNumber: 2 },
+    ]);
+    const firstCall = mocks.rpc.mock.calls[0]?.[1];
+    mocks.rpc.mockClear();
     await importCurrentTransactions("account-1", "extrato.ofx", [
       { ...repeatedRow, rowNumber: 1 },
       { ...repeatedRow, rowNumber: 2 },
     ]);
 
-    expect(reviewInsert).toHaveBeenCalledWith([
-      expect.objectContaining({
-        row_number: 1,
-        review_status: "imported",
+    expect(first).toEqual({ imported: 1, duplicates: 1 });
+    expect(firstCall.rows_input).toHaveLength(2);
+    expect(firstCall.rows_input[0].import_fingerprint).toBe("same-fitid");
+    expect(firstCall.rows_input[1].import_fingerprint).toBe("same-fitid");
+    expect(mocks.rpc.mock.calls[0]?.[1].confirmation_key_input).toBe(
+      firstCall.confirmation_key_input,
+    );
+  });
+
+  it("deletes manual transactions but protects imported history", async () => {
+    const deleteResult = vi.fn().mockResolvedValue({ error: null });
+    const deleteEqId = vi.fn(() => deleteResult());
+    const deleteEqUser = vi.fn(() => ({ eq: deleteEqId }));
+    const remove = vi.fn(() => ({ eq: deleteEqUser }));
+    const maybeSingle = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { source: "bank_import" }, error: null })
+      .mockResolvedValueOnce({ data: { source: "manual" }, error: null });
+    mocks.from.mockReturnValue({
+      select: () => ({
+        eq: () => ({ eq: () => ({ maybeSingle }) }),
       }),
-      expect.objectContaining({
-        row_number: 2,
-        review_status: "duplicate",
-      }),
-    ]);
+      delete: remove,
+    });
+
+    await expect(
+      deleteCurrentTransaction("imported-transaction"),
+    ).resolves.toBe("protected");
+    expect(remove).not.toHaveBeenCalled();
+
+    await expect(
+      deleteCurrentTransaction("manual-transaction"),
+    ).resolves.toBe("deleted");
+    expect(remove).toHaveBeenCalledOnce();
   });
 });

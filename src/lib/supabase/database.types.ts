@@ -360,6 +360,7 @@ export type Database = {
       import_batches: {
         Row: {
           account_id: string
+          confirmation_key: string
           created_at: string
           duplicate_count: number
           file_name: string
@@ -373,6 +374,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          confirmation_key: string
           created_at?: string
           duplicate_count?: number
           file_name: string
@@ -386,6 +388,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          confirmation_key?: string
           created_at?: string
           duplicate_count?: number
           file_name?: string
@@ -478,6 +481,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string
+          due_day: number | null
           frequency: string
           id: string
           next_due_on: string
@@ -492,6 +496,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description: string
+          due_day?: number | null
           frequency: string
           id?: string
           next_due_on: string
@@ -506,6 +511,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string
+          due_day?: number | null
           frequency?: string
           id?: string
           next_due_on?: string
@@ -629,6 +635,19 @@ export type Database = {
           timezone_input: string
         }
         Returns: undefined
+      }
+      confirm_statement_import: {
+        Args: {
+          account_id_input: string
+          confirmation_key_input: string
+          file_name_input: string
+          file_type_input: string
+          rows_input: Json
+        }
+        Returns: {
+          duplicate_count: number
+          imported_count: number
+        }[]
       }
     }
     Enums: {

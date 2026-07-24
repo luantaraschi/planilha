@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getCurrentAiRuntimeSettings: vi.fn(),
   getCurrentFinanceLedger: vi.fn(),
+  getCurrentIdentity: vi.fn(),
   requestOpenAiFinanceAnswer: vi.fn(),
 }));
 
@@ -12,6 +13,9 @@ vi.mock("./ai-settings-repository", () => ({
 vi.mock("@/features/finance/finance-repository", () => ({
   getCurrentFinanceLedger: mocks.getCurrentFinanceLedger,
 }));
+vi.mock("@/features/identity/identity-repository", () => ({
+  getCurrentIdentity: mocks.getCurrentIdentity,
+}));
 vi.mock("./openai-finance", () => ({
   requestOpenAiFinanceAnswer: mocks.requestOpenAiFinanceAnswer,
 }));
@@ -19,8 +23,15 @@ vi.mock("./openai-finance", () => ({
 import { askFinanceAssistant } from "./finance-assistant-actions";
 
 describe("askFinanceAssistant", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.getCurrentIdentity.mockResolvedValue({
+      preferences: { timezone: "Asia/Tokyo" },
+    });
     mocks.getCurrentFinanceLedger.mockResolvedValue({
       accounts: [
         {
@@ -90,5 +101,29 @@ describe("askFinanceAssistant", () => {
     expect(result.mode).toBe("local");
     expect(result.answer).toContain("entraram");
     expect(mocks.requestOpenAiFinanceAnswer).not.toHaveBeenCalled();
+  });
+
+  it("builds the month using the profile timezone", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-01T01:00:00Z"));
+    mocks.getCurrentIdentity.mockResolvedValue({
+      preferences: { timezone: "Asia/Tokyo" },
+    });
+    mocks.getCurrentAiRuntimeSettings.mockResolvedValue({
+      apiKey: "sk-secret",
+      model: "gpt-5.6-luna",
+      instructions: "",
+    });
+    mocks.requestOpenAiFinanceAnswer.mockResolvedValue("Resumo.");
+
+    await askFinanceAssistant("Resumo");
+
+    expect(mocks.requestOpenAiFinanceAnswer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspace: expect.objectContaining({
+          summary: expect.objectContaining({ incomeCents: 500_000 }),
+        }),
+      }),
+    );
   });
 });

@@ -101,10 +101,27 @@ export async function importStatement(
   }
 }
 
-export async function deleteTransaction(formData: FormData) {
+export async function deleteTransaction(
+  _previousState: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
   const transactionId = String(formData.get("transactionId") ?? "");
-  if (!uuidPattern.test(transactionId)) return;
-  if (await deleteCurrentTransaction(transactionId)) {
-    revalidatePath("/financas");
+  if (!uuidPattern.test(transactionId)) {
+    return { status: "error", message: "Lançamento inválido." };
   }
+  const result = await deleteCurrentTransaction(transactionId);
+  if (result === "deleted") {
+    revalidatePath("/financas");
+    return { status: "success", message: "Lançamento removido." };
+  }
+  if (result === "protected") {
+    return {
+      status: "error",
+      message: "Lançamentos importados ficam preservados no histórico.",
+    };
+  }
+  if (result === "missing") {
+    return { status: "error", message: "Esse lançamento não existe mais." };
+  }
+  return { status: "error", message: "Não foi possível remover o lançamento." };
 }

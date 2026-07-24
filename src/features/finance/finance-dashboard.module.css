@@ -427,6 +427,30 @@
   background: var(--tea-rose);
 }
 
+.deleteForm {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+}
+
+.deleteMessage,
+.protectedHistory {
+  display: block;
+  max-width: 12rem;
+  color: var(--clay);
+  font-size: 0.62rem;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.deleteMessage[data-status="error"] {
+  color: #843c45;
+}
+
+.deleteMessage[data-status="success"] {
+  color: #38633f;
+}
+
 .emptyLedger {
   padding: 2rem !important;
   color: var(--clay);

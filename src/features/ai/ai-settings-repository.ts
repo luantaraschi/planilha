@@ -131,6 +131,17 @@ export async function saveCurrentAiSettings(
 export async function getCurrentAiRuntimeSettings() {
   const supabase = await createClient();
   const userId = await getVerifiedUserId(supabase);
+  const { data: preferences, error: preferencesError } = await supabase
+    .from("preferences")
+    .select("ai_processing_consent")
+    .eq("user_id", userId)
+    .single();
+
+  if (preferencesError) {
+    throw new AiSettingsError("Não foi possível conferir o consentimento.");
+  }
+  if (!preferences.ai_processing_consent) return null;
+
   const { data, error } = await supabase
     .from("ai_agent_settings")
     .select(secretFields)

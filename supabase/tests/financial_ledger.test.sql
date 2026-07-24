@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(42);
 
 select has_table('public', 'financial_accounts', 'financial accounts exist');
 select has_table('public', 'financial_categories', 'financial categories exist');
@@ -18,6 +18,31 @@ select col_type_is(
   'amount_cents',
   'bigint',
   'transaction money uses integer cents'
+);
+select col_type_is(
+  'public',
+  'recurring_entries',
+  'due_day',
+  'smallint',
+  'recurring entries preserve their calendar anchor'
+);
+select has_function(
+  'public',
+  'confirm_statement_import',
+  array['uuid', 'text', 'text', 'text', 'jsonb'],
+  'statement confirmation RPC exists'
+);
+select col_has_default(
+  'public',
+  'import_batch_rows',
+  'created_at',
+  'immutable import rows record when they were reviewed'
+);
+select has_trigger(
+  'public',
+  'import_batches',
+  'import_batches_set_updated_at',
+  'mutable batch completion timestamps are maintained'
 );
 
 select is(
@@ -51,6 +76,30 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'public.expenses', 'INSERT'),
   'legacy expenses are read-only'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.import_batches', 'INSERT'),
+  'identities cannot insert import batches outside the RPC'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.import_batches', 'UPDATE'),
+  'identities cannot update import batches outside the RPC'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.import_batches', 'DELETE'),
+  'identities cannot delete import batches outside the RPC'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.import_batch_rows', 'INSERT'),
+  'identities cannot insert import history rows outside the RPC'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.import_batch_rows', 'UPDATE'),
+  'identities cannot update import history rows outside the RPC'
+);
+select ok(
+  not has_table_privilege('authenticated', 'public.import_batch_rows', 'DELETE'),
+  'identities cannot delete import history rows outside the RPC'
 );
 
 insert into auth.users (id, email, raw_user_meta_data)
@@ -228,6 +277,165 @@ select is(
   ),
   1::bigint,
   'a transfer has one auditable ledger record'
+);
+
+create temporary table first_import_result as
+select *
+from public.confirm_statement_import(
+  (
+    select id
+    from public.financial_accounts
+    where user_id = '51000000-0000-0000-0000-000000000001'
+      and name = 'Conta principal'
+  ),
+  'extrato.csv',
+  'csv',
+  'confirmation-key-1',
+  jsonb_build_array(
+    jsonb_build_object(
+      'row_number', 2,
+      'occurred_on', '2026-07-22',
+      'description', 'Pix recebido',
+      'amount_cents', 20000,
+      'transaction_type', 'income',
+      'import_fingerprint', 'same-fingerprint'
+    ),
+    jsonb_build_object(
+      'row_number', 3,
+      'occurred_on', '2026-07-22',
+      'description', 'Pix recebido repetido',
+      'amount_cents', 20000,
+      'transaction_type', 'income',
+      'import_fingerprint', 'same-fingerprint'
+    )
+  )
+);
+
+select results_eq(
+  'select imported_count, duplicate_count from first_import_result',
+  'values (1, 1)',
+  'atomic confirmation imports one row and reviews its duplicate'
+);
+
+create temporary table repeated_import_result as
+select *
+from public.confirm_statement_import(
+  (
+    select id
+    from public.financial_accounts
+    where user_id = '51000000-0000-0000-0000-000000000001'
+      and name = 'Conta principal'
+  ),
+  'extrato.csv',
+  'csv',
+  'confirmation-key-1',
+  jsonb_build_array(
+    jsonb_build_object(
+      'row_number', 2,
+      'occurred_on', '2026-07-22',
+      'description', 'Pix recebido',
+      'amount_cents', 20000,
+      'transaction_type', 'income',
+      'import_fingerprint', 'same-fingerprint'
+    ),
+    jsonb_build_object(
+      'row_number', 3,
+      'occurred_on', '2026-07-22',
+      'description', 'Pix recebido repetido',
+      'amount_cents', 20000,
+      'transaction_type', 'income',
+      'import_fingerprint', 'same-fingerprint'
+    )
+  )
+);
+
+select results_eq(
+  'select imported_count, duplicate_count from repeated_import_result',
+  'values (1, 1)',
+  'repeating a confirmation returns the original result'
+);
+select is(
+  (
+    select count(*)
+    from public.import_batches
+    where confirmation_key = 'confirmation-key-1'
+  ),
+  1::bigint,
+  'idempotent confirmation creates one batch'
+);
+select is(
+  (
+    select count(*)
+    from public.transactions
+    where import_fingerprint = 'same-fingerprint'
+  ),
+  1::bigint,
+  'idempotent confirmation creates one transaction'
+);
+select is(
+  (
+    select count(*)
+    from public.import_batch_rows
+    where import_fingerprint = 'same-fingerprint'
+  ),
+  2::bigint,
+  'the immutable review keeps both source rows'
+);
+
+select throws_ok(
+  $$
+    select *
+    from public.confirm_statement_import(
+      (
+        select id
+        from public.financial_accounts
+        where user_id = '51000000-0000-0000-0000-000000000001'
+          and name = 'Conta principal'
+      ),
+      'invalido.csv',
+      'csv',
+      'confirmation-key-invalid',
+      jsonb_build_array(
+        jsonb_build_object(
+          'row_number', 2,
+          'occurred_on', '2026-07-23',
+          'description', 'Linha inicialmente válida',
+          'amount_cents', 1000,
+          'transaction_type', 'expense',
+          'import_fingerprint', 'rollback-fingerprint'
+        ),
+        jsonb_build_object(
+          'row_number', 3,
+          'occurred_on', '2026-07-23',
+          'description', 'Linha inválida',
+          'amount_cents', 0,
+          'transaction_type', 'expense',
+          'import_fingerprint', 'invalid-fingerprint'
+        )
+      )
+    )
+  $$,
+  'P0001',
+  'invalid import row',
+  'an invalid reviewed row aborts the whole confirmation'
+);
+select is(
+  (
+    select count(*)
+    from public.import_batches
+    where confirmation_key = 'confirmation-key-invalid'
+  ),
+  0::bigint,
+  'an aborted confirmation leaves no batch history'
+);
+select is(
+  (
+    select count(*)
+    from public.transactions
+    where import_fingerprint = 'rollback-fingerprint'
+  ),
+  0::bigint,
+  'an aborted confirmation rolls back earlier transaction rows'
 );
 
 select set_config(

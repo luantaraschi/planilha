@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMonthlyFinanceSummary,
+  dateInTimeZone,
   formatFinanceCurrency,
   normalizeTransactionInput,
   parseBankStatement,
@@ -108,6 +109,7 @@ const ledger: FinanceLedger = {
       categoryId: "category-home",
       frequency: "monthly",
       nextDueOn: "2026-07-28",
+      dueDay: 28,
       active: true,
     },
     {
@@ -119,6 +121,7 @@ const ledger: FinanceLedger = {
       categoryId: "category-income",
       frequency: "monthly",
       nextDueOn: "2026-07-29",
+      dueDay: 29,
       active: true,
     },
   ],
@@ -157,13 +160,99 @@ describe("buildMonthlyFinanceSummary", () => {
 
     expect(summary).toMatchObject({
       confidence: "partial",
-      projectedEndBalanceCents: 320_000,
+      projectedEndBalanceCents: 0,
       freePerDayCents: null,
       missingInputs: [
         "Cadastre o saldo inicial de pelo menos uma conta.",
         "Defina um orçamento mensal para calcular o valor livre por dia.",
         "Cadastre entradas e contas recorrentes para completar a previsão.",
       ],
+    });
+  });
+
+  it("generates every weekly occurrence due in the remaining month", () => {
+    const recurringLedger: FinanceLedger = {
+      ...ledger,
+      transactions: [],
+      recurringEntries: [
+        {
+          id: "weekly",
+          accountId: "account-checking",
+          transactionType: "expense",
+          amountCents: 1_000,
+          description: "Feira",
+          categoryId: "category-home",
+          frequency: "weekly",
+          nextDueOn: "2026-07-01",
+          dueDay: null,
+          active: true,
+        },
+      ],
+    };
+
+    expect(
+      buildMonthlyFinanceSummary(recurringLedger, "2026-07-01"),
+    ).toMatchObject({
+      forecastExpenseCents: 5_000,
+      projectedEndBalanceCents: 145_000,
+    });
+  });
+
+  it("advances an overdue monthly recurrence using its due day", () => {
+    const recurringLedger: FinanceLedger = {
+      ...ledger,
+      transactions: [],
+      recurringEntries: [
+        {
+          id: "monthly",
+          accountId: "account-checking",
+          transactionType: "expense",
+          amountCents: 2_000,
+          description: "Conta mensal",
+          categoryId: "category-home",
+          frequency: "monthly",
+          nextDueOn: "2026-05-31",
+          dueDay: 31,
+          active: true,
+        },
+      ],
+    };
+
+    expect(
+      buildMonthlyFinanceSummary(recurringLedger, "2026-07-24"),
+    ).toMatchObject({
+      forecastExpenseCents: 2_000,
+      projectedEndBalanceCents: 148_000,
+    });
+  });
+
+  it("excludes inactive accounts and their transactions from consolidation", () => {
+    const inactiveLedger: FinanceLedger = {
+      ...ledger,
+      accounts: [
+        ledger.accounts[0],
+        { ...ledger.accounts[1], active: false },
+      ],
+      transactions: [
+        {
+          ...ledger.transactions[0],
+          accountId: "account-savings",
+          amountCents: 500_000,
+        },
+        {
+          ...ledger.transactions[1],
+          amountCents: 10_000,
+        },
+      ],
+      recurringEntries: [],
+    };
+
+    expect(
+      buildMonthlyFinanceSummary(inactiveLedger, "2026-07-24"),
+    ).toMatchObject({
+      incomeCents: 0,
+      expenseCents: 10_000,
+      projectedEndBalanceCents: 90_000,
     });
   });
 });
@@ -277,6 +366,38 @@ describe("statement parsers", () => {
         "conta.csv",
       ).rows[0]?.transactionType,
     ).toBe("income");
+  });
+
+  it("parses pt-BR and en-US thousands without corrupting cents", () => {
+    const parsed = parseBankStatementCsv(
+      [
+        "data;descricao;valor",
+        "2026-07-22;Formato BR;1.234,56",
+        "2026-07-23;Formato US;1,234.56",
+      ].join("\n"),
+    );
+
+    expect(parsed.rows.map((row) => row.amountCents)).toEqual([
+      123_456,
+      123_456,
+    ]);
+  });
+
+  it("skips malformed grouping instead of importing a corrupted amount", () => {
+    const parsed = parseBankStatementCsv(
+      "data;descricao;valor\n2026-07-22;Inválido;1,23,4.56",
+    );
+
+    expect(parsed).toEqual({ rows: [], skipped: 1 });
+  });
+});
+
+describe("dateInTimeZone", () => {
+  it("uses the supplied IANA timezone around a month boundary", () => {
+    const instant = new Date("2026-07-01T01:00:00Z");
+
+    expect(dateInTimeZone(instant, "America/Bahia")).toBe("2026-06-30");
+    expect(dateInTimeZone(instant, "Asia/Tokyo")).toBe("2026-07-01");
   });
 });
 

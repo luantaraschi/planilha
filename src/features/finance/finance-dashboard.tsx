@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GardenIcon } from "@/components/garden-icon";
 import { AccountList } from "./account-list";
-import { deleteTransaction } from "./finance-actions";
 import { FinanceAssistant } from "./finance-assistant";
 import {
   formatFinanceCurrency,
@@ -11,6 +10,7 @@ import {
 } from "./finance-model";
 import { StatementImporter } from "./statement-importer";
 import { TransactionForm } from "./transaction-form";
+import { TransactionDeleteForm } from "./transaction-delete-form";
 import styles from "./finance-dashboard.module.css";
 
 const transactionLabels: Record<
@@ -107,7 +107,15 @@ function TransactionTable({
                         : "Sem categoria")}
                   </small>
                 </td>
-                <td>{accountNames.get(transaction.accountId) ?? "Conta"}</td>
+                <td>
+                  {transaction.transactionType === "transfer" &&
+                  transaction.transferAccountId
+                    ? `${accountNames.get(transaction.accountId) ?? "Conta"} → ${
+                        accountNames.get(transaction.transferAccountId) ??
+                        "Conta"
+                      }`
+                    : (accountNames.get(transaction.accountId) ?? "Conta")}
+                </td>
                 <td>
                   <span
                     className={styles.typeLabel}
@@ -124,20 +132,16 @@ function TransactionTable({
                   </strong>
                 </td>
                 <td>
-                  <form action={deleteTransaction}>
-                    <input
-                      name="transactionId"
-                      type="hidden"
-                      value={transaction.id}
+                  {transaction.source === "manual" ? (
+                    <TransactionDeleteForm
+                      description={transaction.description}
+                      transactionId={transaction.id}
                     />
-                    <button
-                      aria-label={`Remover ${transaction.description}`}
-                      className={styles.removeButton}
-                      type="submit"
-                    >
-                      Remover
-                    </button>
-                  </form>
+                  ) : (
+                    <span className={styles.protectedHistory}>
+                      Preservado no histórico
+                    </span>
+                  )}
                 </td>
               </tr>
             ))

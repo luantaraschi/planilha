@@ -31,6 +31,9 @@ create table public.import_batches (
   account_id uuid not null,
   file_name text not null check (char_length(trim(file_name)) between 1 and 255),
   file_type text not null check (file_type in ('csv', 'ofx')),
+  confirmation_key text not null check (
+    char_length(confirmation_key) between 1 and 128
+  ),
   status text not null default 'reviewed' check (
     status in ('reviewed', 'completed', 'failed')
   ),
@@ -40,6 +43,7 @@ create table public.import_batches (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   unique (id, user_id),
+  unique (user_id, account_id, confirmation_key),
   foreign key (account_id, user_id)
     references public.financial_accounts(id, user_id)
 );
@@ -106,6 +110,7 @@ create table public.recurring_entries (
     frequency in ('weekly', 'monthly', 'yearly')
   ),
   next_due_on date not null,
+  due_day smallint check (due_day between 1 and 31),
   active boolean not null default true,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
@@ -265,6 +270,28 @@ cross join (
 ) as defaults(name, category_type)
 on conflict (user_id, category_type, name) do nothing;
 
+create or replace function private.monthly_due_on(
+  month_input date,
+  due_day_input integer
+)
+returns date
+language sql
+immutable
+strict
+set search_path = ''
+as $$
+  select date_trunc('month', month_input)::date
+    + (
+      least(
+        due_day_input,
+        extract(
+          day from date_trunc('month', month_input)
+            + interval '1 month - 1 day'
+        )::integer
+      ) - 1
+    );
+$$;
+
 insert into public.transactions (
   user_id,
   account_id,
@@ -309,6 +336,7 @@ insert into public.recurring_entries (
   category_id,
   frequency,
   next_due_on,
+  due_day,
   active
 )
 select
@@ -319,7 +347,15 @@ select
   expense.description,
   category.id,
   'monthly',
-  expense.expense_date,
+  case
+    when private.monthly_due_on(current_date, expense.due_day) >= current_date
+      then private.monthly_due_on(current_date, expense.due_day)
+    else private.monthly_due_on(
+      (current_date + interval '1 month')::date,
+      expense.due_day
+    )
+  end,
+  expense.due_day,
   expense.active
 from public.expenses expense
 join public.financial_accounts account
@@ -364,8 +400,6 @@ begin
     'financial_categories',
     'transactions',
     'recurring_entries',
-    'import_batches',
-    'import_batch_rows',
     'budgets',
     'financial_goals'
   ]
@@ -402,6 +436,263 @@ begin
   end loop;
 end;
 $$;
+
+alter table public.import_batches enable row level security;
+alter table public.import_batch_rows enable row level security;
+
+create policy import_batches_select_own
+on public.import_batches
+for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy import_batch_rows_select_own
+on public.import_batch_rows
+for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+revoke all on public.import_batches, public.import_batch_rows from public, anon, authenticated;
+grant select on public.import_batches, public.import_batch_rows to authenticated;
+
+create or replace function public.confirm_statement_import(
+  account_id_input uuid,
+  file_name_input text,
+  file_type_input text,
+  confirmation_key_input text,
+  rows_input jsonb
+)
+returns table(imported_count integer, duplicate_count integer)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_user_id uuid := auth.uid();
+  batch_id_value uuid;
+  transaction_id_value uuid;
+  income_category_id uuid;
+  expense_category_id uuid;
+  row_value jsonb;
+  row_number_value integer;
+  occurred_on_value date;
+  description_value text;
+  amount_cents_value bigint;
+  transaction_type_value text;
+  fingerprint_value text;
+  imported_count_value integer := 0;
+  duplicate_count_value integer := 0;
+begin
+  if current_user_id is null then
+    raise exception 'authentication required';
+  end if;
+  if not exists (
+    select 1
+    from public.financial_accounts account
+    where account.id = account_id_input
+      and account.user_id = current_user_id
+      and account.active
+  ) then
+    raise exception 'invalid account';
+  end if;
+  if char_length(trim(file_name_input)) not between 1 and 255
+    or file_type_input not in ('csv', 'ofx')
+    or char_length(confirmation_key_input) not between 1 and 128
+    or jsonb_typeof(rows_input) <> 'array'
+    or jsonb_array_length(rows_input) not between 1 and 1000
+  then
+    raise exception 'invalid import confirmation';
+  end if;
+
+  insert into public.import_batches (
+    user_id,
+    account_id,
+    file_name,
+    file_type,
+    confirmation_key,
+    status,
+    row_count
+  )
+  values (
+    current_user_id,
+    account_id_input,
+    trim(file_name_input),
+    file_type_input,
+    confirmation_key_input,
+    'reviewed',
+    jsonb_array_length(rows_input)
+  )
+  on conflict (user_id, account_id, confirmation_key) do nothing
+  returning id into batch_id_value;
+
+  if batch_id_value is null then
+    select
+      batch.imported_count,
+      batch.duplicate_count
+    into
+      imported_count_value,
+      duplicate_count_value
+    from public.import_batches batch
+    where batch.user_id = current_user_id
+      and batch.account_id = account_id_input
+      and batch.confirmation_key = confirmation_key_input
+      and batch.status = 'completed';
+
+    if not found then
+      raise exception 'import confirmation is already in progress';
+    end if;
+    return query
+      select imported_count_value, duplicate_count_value;
+    return;
+  end if;
+
+  select category.id
+  into income_category_id
+  from public.financial_categories category
+  where category.user_id = current_user_id
+    and category.category_type = 'income'
+    and category.name = 'Receita extra'
+    and category.active;
+
+  select category.id
+  into expense_category_id
+  from public.financial_categories category
+  where category.user_id = current_user_id
+    and category.category_type = 'expense'
+    and category.name = 'Outros'
+    and category.active;
+
+  if income_category_id is null or expense_category_id is null then
+    raise exception 'default import categories are unavailable';
+  end if;
+
+  for row_value in
+    select item
+    from jsonb_array_elements(rows_input) as input(item)
+  loop
+    row_number_value := (row_value ->> 'row_number')::integer;
+    occurred_on_value := (row_value ->> 'occurred_on')::date;
+    description_value := trim(row_value ->> 'description');
+    amount_cents_value := (row_value ->> 'amount_cents')::bigint;
+    transaction_type_value := row_value ->> 'transaction_type';
+    fingerprint_value := trim(row_value ->> 'import_fingerprint');
+
+    if row_number_value is null
+      or row_number_value <= 0
+      or occurred_on_value is null
+      or char_length(description_value) not between 1 and 120
+      or amount_cents_value is null
+      or amount_cents_value <= 0
+      or transaction_type_value not in ('income', 'expense')
+      or char_length(fingerprint_value) not between 1 and 512
+    then
+      raise exception 'invalid import row';
+    end if;
+
+    transaction_id_value := null;
+    insert into public.transactions (
+      user_id,
+      account_id,
+      transaction_type,
+      amount_cents,
+      occurred_on,
+      due_on,
+      status,
+      description,
+      category_id,
+      transfer_account_id,
+      import_batch_id,
+      import_fingerprint,
+      source
+    )
+    values (
+      current_user_id,
+      account_id_input,
+      transaction_type_value,
+      amount_cents_value,
+      occurred_on_value,
+      null,
+      'cleared',
+      description_value,
+      case
+        when transaction_type_value = 'income' then income_category_id
+        else expense_category_id
+      end,
+      null,
+      batch_id_value,
+      fingerprint_value,
+      'bank_import'
+    )
+    on conflict (user_id, account_id, import_fingerprint)
+      where import_fingerprint is not null
+    do nothing
+    returning id into transaction_id_value;
+
+    if transaction_id_value is null then
+      duplicate_count_value := duplicate_count_value + 1;
+    else
+      imported_count_value := imported_count_value + 1;
+    end if;
+
+    insert into public.import_batch_rows (
+      user_id,
+      batch_id,
+      transaction_id,
+      row_number,
+      occurred_on,
+      description,
+      signed_amount_cents,
+      transaction_type,
+      import_fingerprint,
+      review_status
+    )
+    values (
+      current_user_id,
+      batch_id_value,
+      transaction_id_value,
+      row_number_value,
+      occurred_on_value,
+      description_value,
+      case
+        when transaction_type_value = 'income' then amount_cents_value
+        else -amount_cents_value
+      end,
+      transaction_type_value,
+      fingerprint_value,
+      case
+        when transaction_id_value is null then 'duplicate'
+        else 'imported'
+      end
+    );
+  end loop;
+
+  update public.import_batches
+  set
+    status = 'completed',
+    imported_count = imported_count_value,
+    duplicate_count = duplicate_count_value
+  where id = batch_id_value
+    and user_id = current_user_id;
+
+  return query
+    select imported_count_value, duplicate_count_value;
+end;
+$$;
+
+revoke all on function public.confirm_statement_import(
+  uuid,
+  text,
+  text,
+  text,
+  jsonb
+) from public, anon;
+grant execute on function public.confirm_statement_import(
+  uuid,
+  text,
+  text,
+  text,
+  jsonb
+) to authenticated;
 
 drop policy expenses_insert_own on public.expenses;
 drop policy expenses_update_own on public.expenses;

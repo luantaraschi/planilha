@@ -3,8 +3,10 @@
 import {
   answerFinanceQuestion,
   buildFinanceWorkspace,
+  dateInTimeZone,
 } from "@/features/finance/finance-model";
 import { getCurrentFinanceLedger } from "@/features/finance/finance-repository";
+import { getCurrentIdentity } from "@/features/identity/identity-repository";
 import { getCurrentAiRuntimeSettings } from "./ai-settings-repository";
 import { requestOpenAiFinanceAnswer } from "./openai-finance";
 
@@ -13,19 +15,6 @@ export type FinanceAssistantResult = {
   mode: "local" | "online";
   notice: string;
 };
-
-function todayInProductTimeZone() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "America/Bahia",
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-  return `${value.year}-${value.month}-${value.day}`;
-}
 
 export async function askFinanceAssistant(
   question: string,
@@ -39,9 +28,13 @@ export async function askFinanceAssistant(
     };
   }
 
+  const [ledger, identity] = await Promise.all([
+    getCurrentFinanceLedger(),
+    getCurrentIdentity(),
+  ]);
   const workspace = buildFinanceWorkspace(
-    await getCurrentFinanceLedger(),
-    todayInProductTimeZone(),
+    ledger,
+    dateInTimeZone(new Date(), identity.preferences.timezone),
   );
   const localAnswer = answerFinanceQuestion(normalizedQuestion, workspace);
 

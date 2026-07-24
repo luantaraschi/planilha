@@ -2,24 +2,10 @@ import { redirect } from "next/navigation";
 import { FinanceDashboard } from "@/features/finance/finance-dashboard";
 import {
   buildFinanceWorkspace,
+  dateInTimeZone,
 } from "@/features/finance/finance-model";
 import { getCurrentFinanceLedger } from "@/features/finance/finance-repository";
 import { getCurrentIdentity } from "@/features/identity/identity-repository";
-
-const timeZone = "America/Bahia";
-
-function todayInProductTimeZone() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone,
-  }).formatToParts(new Date());
-  const value = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-  return `${value.year}-${value.month}-${value.day}`;
-}
 
 export default async function FinancePage({
   searchParams,
@@ -33,10 +19,11 @@ export default async function FinancePage({
   }
 
   const ledger = await getCurrentFinanceLedger();
-  const today = todayInProductTimeZone();
+  const timeZone = identity.preferences.timezone;
+  const today = dateInTimeZone(new Date(), timeZone);
   const requestedAccountId = (await searchParams).conta ?? null;
   const selectedAccountId = ledger.accounts.some(
-    (account) => account.id === requestedAccountId,
+    (account) => account.active && account.id === requestedAccountId,
   )
     ? requestedAccountId
     : null;

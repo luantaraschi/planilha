@@ -38,7 +38,7 @@ describe("finance actions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.addCurrentTransaction.mockResolvedValue(true);
-    mocks.deleteCurrentTransaction.mockResolvedValue(true);
+    mocks.deleteCurrentTransaction.mockResolvedValue("deleted");
     mocks.importCurrentTransactions.mockResolvedValue({
       imported: 2,
       duplicates: 0,
@@ -107,14 +107,35 @@ describe("finance actions", () => {
   it("deletes only UUID-shaped transaction ids", async () => {
     const invalid = new FormData();
     invalid.set("transactionId", "not-an-id");
-    await deleteTransaction(invalid);
+    await expect(deleteTransaction(initialState, invalid)).resolves.toEqual({
+      status: "error",
+      message: "Lançamento inválido.",
+    });
     expect(mocks.deleteCurrentTransaction).not.toHaveBeenCalled();
 
     const valid = new FormData();
     valid.set("transactionId", "30000000-0000-4000-8000-000000000003");
-    await deleteTransaction(valid);
+    await expect(deleteTransaction(initialState, valid)).resolves.toEqual({
+      status: "success",
+      message: "Lançamento removido.",
+    });
     expect(mocks.deleteCurrentTransaction).toHaveBeenCalledWith(
       "30000000-0000-4000-8000-000000000003",
     );
+  });
+
+  it("explains when imported history cannot be removed", async () => {
+    mocks.deleteCurrentTransaction.mockResolvedValue("protected");
+    const formData = new FormData();
+    formData.set(
+      "transactionId",
+      "30000000-0000-4000-8000-000000000003",
+    );
+
+    await expect(deleteTransaction(initialState, formData)).resolves.toEqual({
+      status: "error",
+      message: "Lançamentos importados ficam preservados no histórico.",
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

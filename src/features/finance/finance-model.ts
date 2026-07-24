@@ -46,6 +46,7 @@ export type RecurringEntry = {
   categoryId: string | null;
   frequency: "weekly" | "monthly" | "yearly";
   nextDueOn: string;
+  dueDay: number | null;
   active: boolean;
 };
 
@@ -126,13 +127,62 @@ function isValidIsoDate(value: string) {
     parsed.toISOString().slice(0, 10) === value;
 }
 
+function groupedInteger(value: string, separator: string) {
+  const groups = value.split(separator);
+  return groups.length > 1 &&
+    /^\d{1,3}$/.test(groups[0]) &&
+    groups.slice(1).every((group) => /^\d{3}$/.test(group))
+    ? groups.join("")
+    : null;
+}
+
+function normalizedLocalizedNumber(value: string) {
+  const cleaned = value
+    .replace(/(?:BRL|R\$|\$)/gi, "")
+    .replace(/\s/gu, "");
+  const sign = cleaned.startsWith("-") ? "-" : "";
+  const unsigned = /^[+-]/.test(cleaned) ? cleaned.slice(1) : cleaned;
+  if (!unsigned || !/^[\d.,]+$/.test(unsigned)) return null;
+
+  const commas = [...unsigned.matchAll(/,/g)].length;
+  const dots = [...unsigned.matchAll(/\./g)].length;
+  if (commas && dots) {
+    const decimalSeparator =
+      unsigned.lastIndexOf(",") > unsigned.lastIndexOf(".") ? "," : ".";
+    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
+    if (
+      (decimalSeparator === "," ? commas : dots) !== 1
+    ) {
+      return null;
+    }
+    const [integerPart, fraction] = unsigned.split(decimalSeparator);
+    const integer = groupedInteger(integerPart, thousandsSeparator);
+    if (!integer || !/^\d{1,2}$/.test(fraction ?? "")) return null;
+    return `${sign}${integer}.${fraction}`;
+  }
+
+  const separator = commas ? "," : dots ? "." : null;
+  if (!separator) return /^\d+$/.test(unsigned) ? `${sign}${unsigned}` : null;
+
+  const groups = unsigned.split(separator);
+  if (groups.some((group) => !/^\d+$/.test(group))) return null;
+  if (groups.length === 2 && /^\d{1,2}$/.test(groups[1])) {
+    return `${sign}${groups[0]}.${groups[1]}`;
+  }
+  if (groups.length > 2 && /^\d{1,2}$/.test(groups.at(-1) ?? "")) {
+    const integer = groupedInteger(
+      groups.slice(0, -1).join(separator),
+      separator,
+    );
+    return integer ? `${sign}${integer}.${groups.at(-1)}` : null;
+  }
+  const integer = groupedInteger(unsigned, separator);
+  return integer ? `${sign}${integer}` : null;
+}
+
 function centsFromLocalizedValue(value: string) {
-  const cleaned = value.replace(/[R$\s]/g, "");
-  const normalized =
-    cleaned.includes(",") && cleaned.includes(".")
-      ? cleaned.replace(/\./g, "").replace(",", ".")
-      : cleaned.replace(",", ".");
-  const amount = Number(normalized);
+  const normalized = normalizedLocalizedNumber(value);
+  const amount = normalized === null ? Number.NaN : Number(normalized);
   return Number.isFinite(amount) ? Math.round(amount * 100) : Number.NaN;
 }
 
@@ -237,6 +287,77 @@ function monthEnd(month: string) {
     .slice(0, 10);
 }
 
+export function dateInTimeZone(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone,
+  }).formatToParts(date);
+  const value = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function clampedUtcDate(year: number, monthIndex: number, day: number) {
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, monthIndex, Math.min(day, lastDay)));
+}
+
+function recurringOccurrencesUntil(
+  entry: RecurringEntry,
+  currentDate: string,
+  end: string,
+) {
+  let candidate = new Date(`${entry.nextDueOn}T00:00:00Z`);
+  if (
+    !isValidIsoDate(entry.nextDueOn) ||
+    Number.isNaN(candidate.valueOf()) ||
+    (entry.dueDay !== null &&
+      (!Number.isInteger(entry.dueDay) ||
+        entry.dueDay < 1 ||
+        entry.dueDay > 31))
+  ) {
+    return null;
+  }
+
+  const anchorDay = entry.dueDay ?? candidate.getUTCDate();
+  const anchorMonth = candidate.getUTCMonth();
+  const nextOccurrence = () => {
+    if (entry.frequency === "weekly") {
+      candidate = new Date(candidate.valueOf() + 7 * 86_400_000);
+    } else if (entry.frequency === "monthly") {
+      candidate = clampedUtcDate(
+        candidate.getUTCFullYear(),
+        candidate.getUTCMonth() + 1,
+        anchorDay,
+      );
+    } else {
+      candidate = clampedUtcDate(
+        candidate.getUTCFullYear() + 1,
+        anchorMonth,
+        anchorDay,
+      );
+    }
+  };
+
+  let guard = 0;
+  while (candidate.toISOString().slice(0, 10) < currentDate && guard < 600) {
+    nextOccurrence();
+    guard += 1;
+  }
+  if (guard >= 600) return null;
+
+  let count = 0;
+  while (candidate.toISOString().slice(0, 10) <= end && guard < 600) {
+    count += 1;
+    nextOccurrence();
+    guard += 1;
+  }
+  return guard >= 600 ? null : count;
+}
+
 export function buildMonthlyFinanceSummary(
   ledger: FinanceLedger,
   currentDate: string,
@@ -250,8 +371,7 @@ export function buildMonthlyFinanceSummary(
       (!selectedAccountId || account.id === selectedAccountId),
   );
   const selectedIds = new Set(selectedAccounts.map((account) => account.id));
-  const inScope = (accountId: string) =>
-    !selectedAccountId || selectedIds.has(accountId);
+  const inScope = (accountId: string) => selectedIds.has(accountId);
 
   const monthTransactions = ledger.transactions.filter(
     (transaction) =>
@@ -310,21 +430,23 @@ export function buildMonthlyFinanceSummary(
 
   let forecastIncomeCents = 0;
   let forecastExpenseCents = 0;
+  let invalidRecurringSchedule = false;
   for (const entry of ledger.recurringEntries) {
-    if (
-      !entry.active ||
-      !inScope(entry.accountId) ||
-      !entry.nextDueOn.startsWith(month) ||
-      entry.nextDueOn < currentDate
-    ) {
+    if (!entry.active || !inScope(entry.accountId)) {
       continue;
     }
+    const occurrences = recurringOccurrencesUntil(entry, currentDate, end);
+    if (occurrences === null) {
+      invalidRecurringSchedule = true;
+      continue;
+    }
+    const forecastAmount = entry.amountCents * occurrences;
     if (entry.transactionType === "income") {
-      forecastIncomeCents += entry.amountCents;
-      projectedEndBalanceCents += entry.amountCents;
+      forecastIncomeCents += forecastAmount;
+      projectedEndBalanceCents += forecastAmount;
     } else {
-      forecastExpenseCents += entry.amountCents;
-      projectedEndBalanceCents -= entry.amountCents;
+      forecastExpenseCents += forecastAmount;
+      projectedEndBalanceCents -= forecastAmount;
     }
   }
 
@@ -352,6 +474,11 @@ export function buildMonthlyFinanceSummary(
   if (ledger.recurringEntries.length === 0) {
     missingInputs.push(
       "Cadastre entradas e contas recorrentes para completar a previsão.",
+    );
+  }
+  if (invalidRecurringSchedule) {
+    missingInputs.push(
+      "Revise as datas das recorrências para completar a previsão.",
     );
   }
 

@@ -18,7 +18,7 @@ const categoryFields = "id, name, category_type, active";
 const transactionFields =
   "id, account_id, transaction_type, amount_cents, occurred_on, due_on, status, description, category_id, transfer_account_id, source, financial_categories(name)";
 const recurringFields =
-  "id, account_id, transaction_type, amount_cents, description, category_id, frequency, next_due_on, active";
+  "id, account_id, transaction_type, amount_cents, description, category_id, frequency, next_due_on, due_day, active";
 const budgetFields = "id, category_id, month, amount_cents";
 const goalFields =
   "id, name, target_cents, saved_cents, target_on, status";
@@ -142,6 +142,7 @@ export async function getCurrentFinanceLedger(): Promise<FinanceLedger> {
         categoryId: row.category_id,
         frequency: row.frequency as RecurringEntry["frequency"],
         nextDueOn: row.next_due_on,
+        dueDay: row.due_day,
         active: row.active,
       }),
     ),
@@ -204,159 +205,63 @@ export async function importCurrentTransactions(
   rows: StatementRow[],
 ) {
   const supabase = await createClient();
-  const userId = await getVerifiedUserId(supabase);
-  const { data: categories, error: categoryError } = await supabase
-    .from("financial_categories")
-    .select("id, name")
-    .eq("user_id", userId)
-    .in("name", ["Receita extra", "Outros"]);
-  if (categoryError) {
-    throw new Error("Não foi possível preparar as categorias do extrato.");
-  }
-  const incomeCategoryId = categories?.find(
-    (category) => category.name === "Receita extra",
-  )?.id;
-  const expenseCategoryId = categories?.find(
-    (category) => category.name === "Outros",
-  )?.id;
-  if (!incomeCategoryId || !expenseCategoryId) {
-    throw new Error("As categorias padrão do extrato não foram encontradas.");
-  }
-
-  const { data: batch, error: batchError } = await supabase
-    .from("import_batches")
-    .insert({
-      user_id: userId,
-      account_id: accountId,
-      file_name: fileName.slice(0, 255),
-      file_type: fileName.toLowerCase().endsWith(".ofx") ? "ofx" : "csv",
-      status: "reviewed",
-      row_count: rows.length,
-    })
-    .select("id")
-    .single();
-  if (batchError || !batch) {
-    throw new Error("Não foi possível abrir a revisão do extrato.");
-  }
-
+  await getVerifiedUserId(supabase);
   const prepared = rows.map((row) => ({
     row,
     fingerprint: fingerprint(accountId, row),
   }));
-  const fingerprints = prepared.map((item) => item.fingerprint);
-  const { data: existing, error: lookupError } = await supabase
-    .from("transactions")
-    .select("import_fingerprint")
-    .eq("user_id", userId)
-    .eq("account_id", accountId)
-    .in("import_fingerprint", fingerprints);
-  if (lookupError) {
-    throw new Error("Não foi possível conferir duplicidades do extrato.");
-  }
-
-  const seen = new Set(
-    (existing ?? []).flatMap((item) =>
-      item.import_fingerprint ? [item.import_fingerprint] : [],
-    ),
-  );
-  const reviewed = prepared.map((item) => {
-    const duplicate = seen.has(item.fingerprint);
-    if (!duplicate) {
-      seen.add(item.fingerprint);
-    }
-    return { ...item, duplicate };
+  const rowsInput = prepared.map(({ row, fingerprint: importFingerprint }) => ({
+    row_number: row.rowNumber,
+    occurred_on: row.occurredOn,
+    description: row.description,
+    amount_cents: row.amountCents,
+    transaction_type: row.transactionType,
+    import_fingerprint: importFingerprint,
+  }));
+  const normalizedFileName = fileName.slice(0, 255);
+  const confirmationKey = createHash("sha256")
+    .update(
+      JSON.stringify({
+        accountId,
+        fileName: normalizedFileName.toLowerCase(),
+        rows: rowsInput,
+      }),
+    )
+    .digest("hex");
+  const { data, error } = await supabase.rpc("confirm_statement_import", {
+    account_id_input: accountId,
+    file_name_input: normalizedFileName,
+    file_type_input: fileName.toLowerCase().endsWith(".ofx") ? "ofx" : "csv",
+    confirmation_key_input: confirmationKey,
+    rows_input: rowsInput,
   });
-  const unique = reviewed.filter((item) => !item.duplicate);
-
-  let inserted: Array<{ id: string; import_fingerprint: string | null }> = [];
-  if (unique.length > 0) {
-    const { data, error } = await supabase
-      .from("transactions")
-      .insert(
-        unique.map(({ row, fingerprint: importFingerprint }) => ({
-          user_id: userId,
-          account_id: accountId,
-          transaction_type: row.transactionType,
-          amount_cents: row.amountCents,
-          occurred_on: row.occurredOn,
-          due_on: null,
-          status: "cleared",
-          description: row.description,
-          category_id:
-            row.transactionType === "income"
-              ? incomeCategoryId
-              : expenseCategoryId,
-          transfer_account_id: null,
-          import_batch_id: batch.id,
-          import_fingerprint: importFingerprint,
-          source: "bank_import",
-        })),
-      )
-      .select("id, import_fingerprint");
-    if (error) {
-      throw new Error("Não foi possível importar os lançamentos.");
-    }
-    inserted = data ?? [];
-  }
-
-  const transactionIds = new Map(
-    inserted.flatMap((item) =>
-      item.import_fingerprint
-        ? [[item.import_fingerprint, item.id] as const]
-        : [],
-    ),
-  );
-  const { error: reviewError } = await supabase
-    .from("import_batch_rows")
-    .insert(
-      reviewed.map(
-        ({ row, fingerprint: importFingerprint, duplicate }) => ({
-          user_id: userId,
-          batch_id: batch.id,
-          transaction_id: transactionIds.get(importFingerprint) ?? null,
-          row_number: row.rowNumber,
-          occurred_on: row.occurredOn,
-          description: row.description,
-          signed_amount_cents:
-            row.transactionType === "income"
-              ? row.amountCents
-              : -row.amountCents,
-          transaction_type: row.transactionType,
-          import_fingerprint: importFingerprint,
-          review_status: duplicate ? "duplicate" : "imported",
-        }),
-      ),
-    );
-  if (reviewError) {
-    throw new Error("Não foi possível registrar a revisão do extrato.");
-  }
-
-  const result = {
-    imported: unique.length,
-    duplicates: rows.length - unique.length,
-  };
-  const { error: updateError } = await supabase
-    .from("import_batches")
-    .update({
-      status: "completed",
-      imported_count: result.imported,
-      duplicate_count: result.duplicates,
-    })
-    .eq("id", batch.id)
-    .eq("user_id", userId);
-  if (updateError) {
+  const result = data?.[0];
+  if (error || !result) {
     throw new Error("Não foi possível concluir a revisão do extrato.");
   }
-  return result;
+  return {
+    imported: result.imported_count,
+    duplicates: result.duplicate_count,
+  };
 }
 
 export async function deleteCurrentTransaction(transactionId: string) {
   const supabase = await createClient();
   const userId = await getVerifiedUserId(supabase);
+  const { data: transaction, error: readError } = await supabase
+    .from("transactions")
+    .select("source")
+    .eq("user_id", userId)
+    .eq("id", transactionId)
+    .maybeSingle();
+  if (readError) return "error" as const;
+  if (!transaction) return "missing" as const;
+  if (transaction.source !== "manual") return "protected" as const;
+
   const { error } = await supabase
     .from("transactions")
     .delete()
     .eq("user_id", userId)
     .eq("id", transactionId);
-  return !error;
+  return error ? ("error" as const) : ("deleted" as const);
 }

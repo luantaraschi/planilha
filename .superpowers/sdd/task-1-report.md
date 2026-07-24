@@ -211,3 +211,113 @@ recorrências, orçamentos, metas e importações auditáveis.
    de lançamentos/importação. Fluxos dedicados de CRUD para essas quatro
    configurações não foram inventados porque o brief desta fase pede seletor e
    visualização, não telas de administração.
+
+---
+
+## Correções após o review bloqueante
+
+### Privacidade e fuso horário
+
+- O runtime do agente consulta `preferences.ai_processing_consent` no servidor
+  antes de ler o segredo do provedor ou enviar qualquer contexto financeiro.
+- Consentimento ausente, falso ou revogado mantém a análise local e impede a
+  chamada externa.
+- A página financeira e a ação do assistente usam
+  `identity.preferences.timezone`; o valor fixo `America/Bahia` foi removido.
+- O helper de data foi coberto no instante de virada em que Bahia ainda está em
+  30/06 e Tóquio já está em 01/07.
+
+### Recorrências, contas inativas e valores localizados
+
+- A projeção avança recorrências vencidas e gera deterministicamente todas as
+  ocorrências devidas até o fim do mês.
+- Recorrências mensais preservam `due_day` e fazem clamp no último dia do mês,
+  sem perder a âncora 31 nos meses seguintes.
+- O backfill legado copia `expenses.due_day` e calcula o próximo vencimento
+  futuro a partir desse dia.
+- Contas inativas e seus lançamentos não entram no saldo consolidado; uma
+  transferência ainda mostra origem e destino quando o filtro seleciona a
+  conta receptora.
+- O parser monetário diferencia `1.234,56` e `1,234.56` pela posição e
+  agrupamento dos separadores. Agrupamentos incoerentes são rejeitados em vez
+  de serem importados com valor corrompido.
+
+### Confirmação atômica e histórico de importação
+
+- `importCurrentTransactions` faz uma única chamada à RPC
+  `confirm_statement_import`.
+- A RPC `security definer` valida usuário, conta ativa, lote e cada linha;
+  resolve categorias; cria lote, transações e linhas de revisão; e conclui as
+  contagens dentro da mesma transação PostgreSQL.
+- Uma chave SHA-256 determinística identifica a confirmação. A constraint
+  `(user_id, account_id, confirmation_key)` e o retorno do lote já concluído
+  tornam repetições idempotentes.
+- Um erro em qualquer linha reverte inclusive transações inseridas antes dela
+  na mesma confirmação.
+- `import_batches` e `import_batch_rows` são somente leitura para
+  `authenticated`; apenas a RPC grava o histórico. Linhas imutáveis registram
+  `created_at`, enquanto a conclusão mutável do lote mantém `updated_at` por
+  trigger.
+
+### Exclusão e clareza do ledger
+
+- Apenas lançamentos `manual` podem ser removidos pelo repositório.
+- Importados e legados aparecem como `Preservado no histórico`, sem ação
+  destrutiva; uma tentativa direta ainda recebe rejeição explícita do servidor.
+- A exclusão manual agora usa estado de ação e apresenta sucesso ou erro em uma
+  região `aria-live`, eliminando a falha silenciosa.
+- Transferências exibem `origem → destino` na coluna de conta.
+
+## RED / GREEN das correções
+
+| Ciclo | RED observado | GREEN |
+| --- | --- | --- |
+| Consentimento | o teste recebeu configuração online e leu `ai_agent_settings` mesmo com consentimento falso | consentimento falso retorna `null` sem consultar o segredo |
+| Fuso horário | na virada UTC, o assistente esperava a entrada de 01/07 em Tóquio e recebeu zero pelo fuso fixo de Bahia | página e ação usam o fuso do perfil |
+| Recorrências | semanal esperava 5 ocorrências e recebeu 1; mensal vencida esperava 1 e recebeu 0 | todas as ocorrências restantes são geradas com âncora preservada |
+| Conta inativa | uma receita de conta inativa apareceu como R$ 5.000,00 e distorceu o saldo | conta inativa ficou fora das somas consolidadas |
+| Parser | `1,234.56` virou 123 centavos e agrupamento malformado não tinha proteção | pt-BR/en-US chegam aos mesmos centavos e formato ambíguo é ignorado |
+| Migração legada | contrato falhou porque `due_day` não existia no insert/backfill | schema, tipos e backfill preservam `due_day` |
+| RPC atômica | contratos falharam sem função/idempotência e os testes do repositório ainda exigiam várias tabelas | uma chamada RPC; pgTAP prova repetição idempotente e rollback integral |
+| Histórico | contratos encontraram permissões de insert/update/delete nas tabelas de importação | políticas e grants permitem somente leitura externa |
+| Exclusão | repositório retornava apenas `true`, a ação não retornava feedback e a UI oferecia remover importado | estados `deleted/protected/missing/error` e feedback visível |
+| Transferência | a tabela mostrava somente a conta de origem | origem e destino aparecem inclusive no recorte da receptora |
+
+## Verificação final após as correções
+
+- `npm run db:reset`
+  - migrações aplicadas integralmente no banco local.
+- Testes focados durante os ciclos:
+  - os RED acima foram observados antes da implementação;
+  - execução final: 7 arquivos e 37 testes, todos passaram.
+- `npm test`
+  - 33 arquivos;
+  - 106 testes;
+  - todos passaram.
+- `npm run db:test`
+  - 4 arquivos SQL;
+  - 98 testes;
+  - todos passaram.
+- `npm run db:types`
+  - tipos locais regenerados com `due_day`, `confirmation_key` e a RPC.
+- `npm run typecheck`
+  - passou sem erros.
+- `npm run lint`
+  - passou sem erros ou avisos.
+- `npm run build`
+  - build Next.js 16 concluído;
+  - `/financas` compilada como rota dinâmica.
+- `git diff --check`
+  - passou.
+
+## Limitação visual desta rodada
+
+Por orientação do controlador, nenhuma ferramenta visual adicional foi
+instalada e a inspeção real no Galaxy Tab S9 FE ficou reservada ao controlador.
+A aplicação está migrada, testada e com build de produção pronto para essa
+inspeção. Essa validação visual real continua pendente e não é apresentada aqui
+como evidência concluída.
+
+As correções acima substituem a preocupação anterior sobre chamadas sequenciais
+de importação: a confirmação agora é uma RPC PostgreSQL única, atômica e
+idempotente.

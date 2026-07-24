@@ -89,7 +89,7 @@ describe("AI settings repository", () => {
 
   it("decrypts provider settings only for the server runtime", async () => {
     const encrypted = encryptApiKey("sk-runtime-secret", encryptionKey);
-    const maybeSingle = vi.fn().mockResolvedValue({
+    const settingsMaybeSingle = vi.fn().mockResolvedValue({
       data: {
         model: "gpt-5.6-luna",
         instructions: "Seja breve.",
@@ -100,13 +100,41 @@ describe("AI settings repository", () => {
       },
       error: null,
     });
-    const eq = vi.fn(() => ({ maybeSingle }));
-    mocks.from.mockReturnValue({ select: vi.fn(() => ({ eq })) });
+    const consentSingle = vi.fn().mockResolvedValue({
+      data: { ai_processing_consent: true },
+      error: null,
+    });
+    mocks.from.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() =>
+          table === "preferences"
+            ? { single: consentSingle }
+            : { maybeSingle: settingsMaybeSingle },
+        ),
+      })),
+    }));
 
     await expect(getCurrentAiRuntimeSettings()).resolves.toEqual({
       apiKey: "sk-runtime-secret",
       model: "gpt-5.6-luna",
       instructions: "Seja breve.",
     });
+  });
+
+  it("does not read provider secrets when external processing consent is revoked", async () => {
+    const consentSingle = vi.fn().mockResolvedValue({
+      data: { ai_processing_consent: false },
+      error: null,
+    });
+    mocks.from.mockImplementation((table: string) => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({ single: consentSingle })),
+      })),
+      table,
+    }));
+
+    await expect(getCurrentAiRuntimeSettings()).resolves.toBeNull();
+    expect(mocks.from).toHaveBeenCalledWith("preferences");
+    expect(mocks.from).not.toHaveBeenCalledWith("ai_agent_settings");
   });
 });
