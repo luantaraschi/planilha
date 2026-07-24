@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="theme-color" content="#A73655" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sem conexão · Meu espaço</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        padding: 1.5rem;
+        color: #45352f;
+        background: #fffaf7;
+        font: 1rem/1.55 "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(100%, 34rem);
+        padding: clamp(1.5rem, 6vw, 3rem);
+        background: white;
+        border: 1px solid #eadbd4;
+        border-radius: 1.5rem 1.5rem 0.65rem;
+        box-shadow: 0 18px 50px rgb(101 73 61 / 9%);
+      }
+      img { width: 4rem; height: 4rem; }
+      h1 { margin: 1rem 0 0.5rem; font-size: 2rem; line-height: 1.1; }
+      p { margin: 0 0 1.25rem; color: #725e55; }
+      button {
+        min-height: 3rem;
+        padding: 0 1rem;
+        color: white;
+        background: #a73655;
+        border: 0;
+        border-radius: 0.75rem;
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      button:focus-visible { outline: 3px solid #71334a; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img alt="" src="/icons/garden-app.svg" />
+      <h1>Seu espaço está esperando</h1>
+      <p>
+        Não foi possível carregar esta página sem conexão. O que já foi salvo
+        continua protegido; tente de novo quando a internet voltar.
+      </p>
+      <button onclick="location.reload()" type="button">Tentar novamente</button>
+    </main>
+  </body>
+</html>

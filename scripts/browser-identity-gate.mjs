@@ -10,10 +10,10 @@ import {
   elementCenterAfterScroll,
   hasVisibleFocusIndicator,
   pressArrow,
-  pressEnter,
   ResourceRegistry,
   withTimeoutCleanup,
 } from "./browser-gate-lib.mjs";
+import { runResponsiveGate } from "./browser-responsive-gate.mjs";
 
 const APP_URL = new URL(
   process.env.APP_URL ?? "http://127.0.0.1:3000/entrar",
@@ -317,13 +317,14 @@ async function assertFocusOrder(
           focusWithinBorderColorBefore: baseline?.borderColor,
           focusWithinBoxShadowAfter: containerStyle?.boxShadow,
           focusWithinBoxShadowBefore: baseline?.boxShadow,
+          ariaLabel: active.getAttribute("aria-label") || undefined,
           checked: "checked" in active ? active.checked : undefined,
           id: active.id || undefined,
           name: active.getAttribute("name") || undefined,
           outlineStyle: getComputedStyle(active).outlineStyle,
           outlineWidth: getComputedStyle(active).outlineWidth,
           tag: active.tagName,
-          text: active.textContent?.replace(/\\s+/g, " ").trim() || undefined,
+          text: active.innerText?.replace(/\\s+/g, " ").trim() || undefined,
           type: active.getAttribute("type") || undefined,
           value: active.getAttribute("value") || undefined
         };
@@ -501,26 +502,21 @@ async function closeBrowserRuns() {
 async function assertCompleteTodayFocus(client, expectedDevicePixelRatio) {
   const navigationFocus = await assertFocusOrder(client, [
     { tag: "A", text: "Pular para o conteúdo" },
+    { ariaLabel: "Ir para o início", tag: "A" },
     { tag: "A", text: "Hoje" },
     { tag: "A", text: "Agenda" },
     { tag: "A", text: "Tarefas" },
     { tag: "A", text: "Finanças" },
     { tag: "A", text: "Bem-estar" },
-    { tag: "SUMMARY", text: "Mais" },
+    { tag: "A", text: "Metas" },
+    { tag: "A", text: "Notas" },
+    { tag: "A", text: "Assistente" },
+    { tag: "A", text: "Ajustes" },
+    { tag: "BUTTON", text: "Sair" },
   ]);
-  await pressEnter(client);
-  assert.equal(
-    await evaluate(client, 'document.querySelector("details")?.open'),
-    true,
-  );
   const contentBeforeMoodFocus = await assertFocusOrder(
     client,
     [
-      { tag: "A", text: "Metas" },
-      { tag: "A", text: "Notas" },
-      { tag: "A", text: "Assistente" },
-      { tag: "A", text: "Configurações" },
-      { tag: "BUTTON", text: "Sair" },
       { tag: "BUTTON", text: "Adicionar" },
       { id: "quick-capture", tag: "INPUT" },
       {
@@ -713,12 +709,7 @@ async function runBrowserGate(supabase, identity) {
     `Bom dia, ${ONBOARDING_EXPECTED.displayName}`,
   );
 
-  await click(zoomed.client, "details > summary");
-  assert.equal(
-    await evaluate(zoomed.client, 'document.querySelector("details").open'),
-    true,
-  );
-  await click(zoomed.client, 'details form button[type="submit"]');
+  await click(zoomed.client, 'nav > form button[type="submit"]');
   await waitForPath(zoomed.client, "/entrar", "#email");
 
   await replaceText(zoomed.client, "#email", identity.email);
@@ -739,6 +730,14 @@ async function runBrowserGate(supabase, identity) {
     zoomed.client,
     loginMetrics.devicePixelRatio,
   );
+  await replaceText(baseline.client, "#email", identity.email);
+  await replaceText(baseline.client, "#password", identity.password);
+  await click(
+    baseline.client,
+    'form button[type="submit"]:not([data-auth-action])',
+  );
+  await waitForPath(baseline.client, "/", "#quick-capture");
+  const responsive = await runResponsiveGate(baseline.client);
 
   if (SCREENSHOT_PATH) {
     await baseline.client.send("Emulation.setDeviceMetricsOverride", {
@@ -770,6 +769,7 @@ async function runBrowserGate(supabase, identity) {
           },
           today,
         },
+        responsive,
         zoom100,
       },
       null,
@@ -780,6 +780,7 @@ async function runBrowserGate(supabase, identity) {
 
 async function runTodayContinuation(credentials) {
   const zoomed = await browserRun(5);
+  const baseline = await browserRun(0);
   const loginMetrics = await metrics(zoomed.client);
   await replaceText(zoomed.client, "#email", credentials.email);
   await replaceText(zoomed.client, "#password", credentials.password);
@@ -792,8 +793,22 @@ async function runTodayContinuation(credentials) {
     zoomed.client,
     loginMetrics.devicePixelRatio,
   );
+  await replaceText(baseline.client, "#email", credentials.email);
+  await replaceText(baseline.client, "#password", credentials.password);
+  await click(
+    baseline.client,
+    'form button[type="submit"]:not([data-auth-action])',
+  );
+  await waitForPath(baseline.client, "/", "#quick-capture");
+  const responsive = await runResponsiveGate(baseline.client);
 
-  console.log(JSON.stringify({ continuation: "today", routes: { today } }, null, 2));
+  console.log(
+    JSON.stringify(
+      { continuation: "today", responsive, routes: { today } },
+      null,
+      2,
+    ),
+  );
 }
 
 assert.equal(

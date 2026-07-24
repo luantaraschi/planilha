@@ -28,6 +28,8 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1.5rem 1rem 1.25rem;
   background: var(--tea-rose);
   border-right: 1px solid var(--border);
@@ -60,6 +62,10 @@
   display: grid;
   gap: 0.18rem;
   margin-top: 2rem;
+}
+
+.navCompactLabel {
+  display: none;
 }
 
 .navItem,
@@ -747,9 +753,95 @@
 }
 
 @media (max-width: 56.25rem) {
+  .main {
+    padding: 1.35rem;
+  }
+
+  .contentGrid,
+  .lowerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rightRail {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .finance {
+    min-height: 0;
+  }
+
+  .habitList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 37.5rem) and (max-width: 63.999rem) {
+  .shell {
+    grid-template-columns: 6.75rem minmax(0, 1fr);
+  }
+
+  .sidebar {
+    height: 100dvh;
+    padding:
+      max(1rem, env(safe-area-inset-top))
+      max(0.55rem, env(safe-area-inset-right))
+      max(0.8rem, env(safe-area-inset-bottom))
+      max(0.55rem, env(safe-area-inset-left));
+  }
+
+  .brand {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .brandLabel,
+  .sidebarNote,
+  .navLabel {
+    display: none;
+  }
+
+  .navCompactLabel {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nav {
+    gap: 0.08rem;
+    margin-top: 0.8rem;
+  }
+
+  .navItem,
+  .navActive,
+  .signOutButton {
+    min-height: 3.15rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.08rem;
+    padding: 0.25rem 0.15rem;
+    font-size: 0.64rem;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .navItem svg,
+  .navActive svg,
+  .signOutButton svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .desktopSignOut {
+    padding-top: 0.2rem;
+    margin-top: 0.2rem;
+  }
+}
+
+@media (max-width: 37.499rem) {
   .shell {
     grid-template-columns: 1fr;
-    padding-bottom: 5.4rem;
+    padding-bottom: calc(5.4rem + env(safe-area-inset-bottom));
   }
 
   .sidebar {
@@ -759,7 +851,10 @@
     width: auto;
     height: auto;
     display: block;
-    padding: 0.45rem 0.55rem max(0.45rem, env(safe-area-inset-bottom));
+    padding:
+      0.45rem max(0.55rem, env(safe-area-inset-right))
+      max(0.45rem, env(safe-area-inset-bottom))
+      max(0.55rem, env(safe-area-inset-left));
     border-top: 1px solid var(--border);
     border-right: 0;
     box-shadow: 0 -12px 30px rgb(101 73 61 / 8%);
@@ -776,7 +871,8 @@
     margin: 0;
   }
 
-  .navItem[data-mobile-secondary="true"] {
+  .navItem[data-mobile-secondary="true"],
+  .navActive[data-mobile-secondary="true"] {
     display: none;
   }
 
@@ -789,6 +885,14 @@
     padding: 0.28rem 0.4rem;
     font-size: 0.68rem;
     white-space: nowrap;
+  }
+
+  .navLabel {
+    display: block;
+  }
+
+  .navCompactLabel {
+    display: none;
   }
 
   .moreNav {
@@ -816,7 +920,8 @@
     display: none;
   }
 
-  .moreNav[open] .moreSummary {
+  .moreNav[open] .moreSummary,
+  .moreNav[data-active="true"] .moreSummary {
     color: var(--cocoa);
     background: var(--surface);
   }
@@ -858,26 +963,6 @@
     display: none;
   }
 
-  .main {
-    padding: 1.35rem;
-  }
-
-  .contentGrid,
-  .lowerGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .rightRail {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .finance {
-    min-height: 0;
-  }
-
-  .habitList {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 43.75rem) {

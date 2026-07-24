@@ -6,10 +6,18 @@ import styles from "@/features/today/today-dashboard.module.css";
 type AppSection = "today" | "finance" | "settings";
 
 const navigation = [
-  { key: "today", label: "Hoje", icon: "today", href: "/", mobile: "primary" },
+  {
+    key: "today",
+    label: "Hoje",
+    compactLabel: "Hoje",
+    icon: "today",
+    href: "/",
+    mobile: "primary",
+  },
   {
     key: "agenda",
     label: "Agenda",
+    compactLabel: "Agenda",
     icon: "calendar",
     href: "/#linha-do-tempo",
     mobile: "primary",
@@ -17,6 +25,7 @@ const navigation = [
   {
     key: "tasks",
     label: "Tarefas",
+    compactLabel: "Tarefas",
     icon: "tasks",
     href: "/#prioridades",
     mobile: "primary",
@@ -24,6 +33,7 @@ const navigation = [
   {
     key: "finance",
     label: "Finanças",
+    compactLabel: "Finanças",
     icon: "finance",
     href: "/financas",
     mobile: "primary",
@@ -31,6 +41,7 @@ const navigation = [
   {
     key: "wellbeing",
     label: "Bem-estar",
+    compactLabel: "Bem-estar",
     icon: "wellbeing",
     href: "/#bem-estar",
     mobile: "primary",
@@ -38,6 +49,7 @@ const navigation = [
   {
     key: "goals",
     label: "Metas",
+    compactLabel: "Metas",
     icon: "goals",
     href: "/#rituais",
     mobile: "secondary",
@@ -45,6 +57,7 @@ const navigation = [
   {
     key: "notes",
     label: "Notas",
+    compactLabel: "Notas",
     icon: "notes",
     href: "/#quick-capture",
     mobile: "secondary",
@@ -52,6 +65,7 @@ const navigation = [
   {
     key: "assistant",
     label: "Assistente",
+    compactLabel: "Assistente",
     icon: "assistant",
     href: "/financas#assistente",
     mobile: "secondary",
@@ -59,6 +73,7 @@ const navigation = [
   {
     key: "settings",
     label: "Configurações",
+    compactLabel: "Ajustes",
     icon: "settings",
     href: "/configuracoes",
     mobile: "secondary",
@@ -66,6 +81,7 @@ const navigation = [
 ] satisfies Array<{
   key: string;
   label: string;
+  compactLabel: string;
   icon: GardenIconName;
   href: string;
   mobile: "primary" | "secondary";
@@ -89,7 +105,13 @@ function SignOutButton() {
   return (
     <button className={styles.signOutButton} type="submit">
       <SignOutIcon />
-      <span>Sair</span>
+      <span className={styles.navLabel}>Sair</span>
+      <span
+        aria-hidden="true"
+        className={styles.navCompactLabel}
+      >
+        Sair
+      </span>
     </button>
   );
 }
@@ -105,7 +127,7 @@ export function AppSidebar({ active }: { active: AppSection }) {
         <span aria-hidden="true" className={styles.brandMark}>
           <GardenIcon name="wellbeing" size={26} />
         </span>
-        <span>Meu espaço</span>
+        <span className={styles.brandLabel}>Meu espaço</span>
       </Link>
 
       <nav aria-label="Principal" className={styles.nav}>
@@ -122,22 +144,43 @@ export function AppSidebar({ active }: { active: AppSection }) {
               key={item.key}
             >
               <GardenIcon name={item.icon} size={23} />
-              <span>{item.label}</span>
+              <span className={styles.navLabel}>{item.label}</span>
+              <span
+                aria-hidden="true"
+                className={styles.navCompactLabel}
+                data-compact-label
+              >
+                {item.compactLabel}
+              </span>
             </Link>
           );
         })}
-        <details className={styles.moreNav}>
+        <details
+          className={styles.moreNav}
+          data-active={
+            secondaryNavigation.some((item) => item.key === active)
+              ? "true"
+              : undefined
+          }
+        >
           <summary className={styles.moreSummary}>
             <GardenIcon name="goals" size={23} />
             <span>Mais</span>
           </summary>
           <div className={styles.moreMenu}>
-            {secondaryNavigation.map((item) => (
-              <Link href={item.href} key={item.key}>
-                <GardenIcon name={item.icon} size={23} />
-                <span>{item.label}</span>
-              </Link>
-            ))}
+            {secondaryNavigation.map((item) => {
+              const isActive = item.key === active;
+              return (
+                <Link
+                  aria-current={isActive ? "page" : undefined}
+                  href={item.href}
+                  key={item.key}
+                >
+                  <GardenIcon name={item.icon} size={23} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
             <form action={signOut}>
               <SignOutButton />
             </form>

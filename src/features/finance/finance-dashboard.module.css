@@ -1033,12 +1033,13 @@
   }
 }
 
-@media (max-width: 56.25rem) {
+@media (max-width: 63.999rem) {
   .shell {
-    grid-template-columns: 1fr;
-    padding-bottom: 5.4rem;
+    grid-template-columns: 6.75rem minmax(0, 1fr);
   }
+}
 
+@media (max-width: 56.25rem) {
   .main {
     padding: 1.2rem;
   }
@@ -1049,6 +1050,13 @@
 
   .workspace {
     grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 0.68fr);
+  }
+}
+
+@media (max-width: 37.499rem) {
+  .shell {
+    grid-template-columns: 1fr;
+    padding-bottom: calc(5.4rem + env(safe-area-inset-bottom));
   }
 }
 

@@ -10,6 +10,7 @@ import {
   ResourceRegistry,
   withTimeoutCleanup,
 } from "./browser-gate-lib.mjs";
+import * as gateLib from "./browser-gate-lib.mjs";
 
 class FakeSocket extends EventTarget {
   sent = [];
@@ -290,6 +291,50 @@ describe("hasVisibleFocusIndicator", () => {
         outlineWidth: "0px",
       }),
       false,
+    );
+  });
+});
+
+describe("responsive browser audit", () => {
+  it("keeps the five acceptance viewports in one shared contract", () => {
+    assert.deepEqual(gateLib.RESPONSIVE_VIEWPORTS, [
+      { height: 800, name: "mobile", width: 360 },
+      { height: 1280, name: "tablet-portrait", width: 800 },
+      { height: 800, name: "tablet-landscape", width: 1280 },
+      { height: 800, name: "tablet-compact", width: 720 },
+      { height: 900, name: "desktop", width: 1440 },
+    ]);
+  });
+
+  it("rejects overflow, covered actions, and inaccessible dialogs", () => {
+    const assertAudit =
+      gateLib.assertResponsiveAudit ??
+      (() => assert.fail("assertResponsiveAudit is missing"));
+
+    assert.doesNotThrow(() =>
+      assertAudit({
+        coveredActions: [],
+        dialogs: [],
+        viewport: { clientWidth: 360, scrollWidth: 360 },
+      }),
+    );
+    assert.throws(
+      () =>
+        assertAudit({
+          coveredActions: ["Adicionar lançamento"],
+          dialogs: [],
+          viewport: { clientWidth: 360, scrollWidth: 361 },
+        }),
+      /horizontal overflow/,
+    );
+    assert.throws(
+      () =>
+        assertAudit({
+          coveredActions: [],
+          dialogs: [{ accessible: false, label: "" }],
+          viewport: { clientWidth: 800, scrollWidth: 800 },
+        }),
+      /inaccessible dialog/,
     );
   });
 });

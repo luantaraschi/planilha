@@ -75,10 +75,12 @@ páginas ou painéis próprios. A prioridade visual segue tarefa, urgência e
 momento do dia. Densidade pode variar entre módulos, mas a cadência de espaço e
 a posição das ações permanecem previsíveis.
 
-Na implementação atual, a navegação lateral muda para uma barra inferior a
-partir de `900px`: cinco destinos ficam expostos e `Mais` agrupa Metas, Notas e
-Assistente. Abaixo de `700px`, a ilustração vira um recorte horizontal compacto;
-captura rápida, linha do tempo e resumos seguem em uma coluna.
+Na implementação atual há três modos exatos: abaixo de `600px`, cinco destinos
+e `Mais` formam a barra inferior; entre `600px` e `1023px`, todos os destinos
+ficam no rail compacto com pictograma e rótulo curto visível; a partir de
+`1024px`, a sidebar completa retorna. Abaixo de `700px`, a ilustração vira um
+recorte horizontal compacto; captura rápida, linha do tempo e resumos seguem em
+uma coluna.
 
 ## Elevation & Depth
 
@@ -122,7 +124,11 @@ espessura de traço e iluminação.
   erros inline associados aos campos e redirects protegidos para perfis sem
   sessão ou onboarding.
 - **Today shell:** sidebar persistente no desktop e barra inferior com cinco
-  destinos + `Mais` no mobile, com link de salto para o conteúdo principal.
+  destinos + `Mais` no mobile, rail rotulado no tablet e link de salto para o
+  conteúdo principal.
+- **PWA shell:** manifest e ícones Jardim de Pêssego, fallback offline público,
+  aviso de conexão e service worker que nunca armazena páginas ou respostas
+  autenticadas.
 - **Morning header:** saudação, data localizada, ação `Adicionar` e ilustração
   editorial própria em WebP (`1200 × 800`, 94 KB).
 - **Quick capture:** campo universal em superfície branca; a ação do cabeçalho

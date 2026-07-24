@@ -12,9 +12,9 @@ const navigationCss = readFileSync(
 );
 
 describe("finance tablet layout", () => {
-  it("keeps summary and ledger split at the 900px navigation breakpoint", () => {
+  it("keeps summary and ledger split with the labeled rail through 1023px", () => {
     const tabletRules = css
-      .split("@media (max-width: 56.25rem)")[1]
+      .split("@media (max-width: 63.999rem)")[1]
       ?.split("@media (max-width: 47rem)")[0];
 
     expect(tabletRules).toContain(".workspace");

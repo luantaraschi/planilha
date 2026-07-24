@@ -7,6 +7,7 @@ import styles from "./today-dashboard.module.css";
 
 const INITIAL_PREVIEW_NOTICE =
   "Prévia navegável: as alterações ficam apenas nesta tela.";
+const DRAFT_KEY = "quick-capture-draft";
 
 export function QuickCapture({
   dateLabel,
@@ -16,7 +17,11 @@ export function QuickCapture({
   greeting: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (localStorage.getItem(DRAFT_KEY) ?? ""),
+  );
   const [feedback, setFeedback] = useState(INITIAL_PREVIEW_NOTICE);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -30,6 +35,7 @@ export function QuickCapture({
 
     setFeedback(`“${trimmedDraft}” foi adicionado só nesta prévia.`);
     setDraft("");
+    localStorage.removeItem(DRAFT_KEY);
   }
 
   return (
@@ -61,7 +67,15 @@ export function QuickCapture({
         <input
           aria-describedby="preview-notice"
           id="quick-capture"
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => {
+            const value = event.target.value;
+            setDraft(value);
+            if (value) {
+              localStorage.setItem(DRAFT_KEY, value);
+            } else {
+              localStorage.removeItem(DRAFT_KEY);
+            }
+          }}
           placeholder="Registre uma tarefa, gasto, nota ou compromisso…"
           ref={inputRef}
           type="text"

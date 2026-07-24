@@ -42,6 +42,46 @@ input {
   font: inherit;
 }
 
+.connection-status {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 45;
+  width: min(32rem, calc(100vw - 1.5rem));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem 0.7rem 0.9rem;
+  color: var(--cocoa);
+  background: var(--butter);
+  border: 1px solid #d6bf72;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-ambient);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  transform: translateX(-50%);
+}
+
+.connection-status button {
+  min-height: 2.75rem;
+  flex: 0 0 auto;
+  padding: 0 0.8rem;
+  color: white;
+  background: var(--raspberry);
+  border: 0;
+  border-radius: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 37.499rem) {
+  .connection-status {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 ::selection {
   color: var(--cocoa);
   background: var(--peach);

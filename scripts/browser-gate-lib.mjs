@@ -1,3 +1,29 @@
+export const RESPONSIVE_VIEWPORTS = [
+  { height: 800, name: "mobile", width: 360 },
+  { height: 1280, name: "tablet-portrait", width: 800 },
+  { height: 800, name: "tablet-landscape", width: 1280 },
+  { height: 800, name: "tablet-compact", width: 720 },
+  { height: 900, name: "desktop", width: 1440 },
+];
+
+export function assertResponsiveAudit({
+  coveredActions,
+  dialogs,
+  viewport,
+}) {
+  if (viewport.scrollWidth > viewport.clientWidth) {
+    throw new Error(
+      `horizontal overflow: ${viewport.scrollWidth}px > ${viewport.clientWidth}px`,
+    );
+  }
+  if (coveredActions.length > 0) {
+    throw new Error(`covered actions: ${coveredActions.join(", ")}`);
+  }
+  if (dialogs.some((dialog) => !dialog.accessible)) {
+    throw new Error("inaccessible dialog");
+  }
+}
+
 export class CdpClient {
   #commandTimeoutMs;
   #nextId = 0;
