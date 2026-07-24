@@ -70,6 +70,54 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          active: boolean
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          due_day: number | null
+          expense_date: string
+          expense_type: string
+          id: string
+          import_fingerprint: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          amount: number
+          category: string
+          created_at?: string
+          description: string
+          due_day?: number | null
+          expense_date: string
+          expense_type: string
+          id?: string
+          import_fingerprint?: string | null
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          due_day?: number | null
+          expense_date?: string
+          expense_type?: string
+          id?: string
+          import_fingerprint?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       preferences: {
         Row: {
           ai_processing_consent: boolean

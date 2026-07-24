@@ -7,7 +7,7 @@ const PROFILE_FIELDS =
 const PREFERENCE_FIELDS =
   "user_id, currency, locale, timezone, week_starts_on, email_reminders, ai_processing_consent";
 
-async function verifiedUserId(
+export async function getVerifiedUserId(
   supabase: Awaited<ReturnType<typeof createClient>>,
 ) {
   const { data, error } = await supabase.auth.getClaims();
@@ -17,7 +17,7 @@ async function verifiedUserId(
 
 export async function getCurrentIdentity() {
   const supabase = await createClient();
-  const userId = await verifiedUserId(supabase);
+  const userId = await getVerifiedUserId(supabase);
   const [profileResult, preferenceResult] = await Promise.all([
     supabase
       .from("profiles")
@@ -49,7 +49,7 @@ export async function getCurrentIdentity() {
 
 export async function completeCurrentOnboarding(input: OnboardingInput) {
   const supabase = await createClient();
-  await verifiedUserId(supabase);
+  await getVerifiedUserId(supabase);
   const { error } = await supabase.rpc("complete_onboarding", {
     display_name_input: input.displayName,
     timezone_input: input.timezone,

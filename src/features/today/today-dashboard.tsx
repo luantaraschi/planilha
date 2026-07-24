@@ -1,8 +1,5 @@
-import {
-  GardenIcon,
-  type GardenIconName,
-} from "@/components/garden-icon";
-import { signOut } from "@/features/identity/auth-actions";
+import { AppSidebar } from "@/components/app-sidebar";
+import { GardenIcon } from "@/components/garden-icon";
 import { QuickCapture } from "./quick-capture";
 import {
   formatCurrency,
@@ -10,56 +7,6 @@ import {
   type TodaySnapshot,
 } from "./today-model";
 import styles from "./today-dashboard.module.css";
-
-const navigation = [
-  { label: "Hoje", icon: "today", href: "#inicio", mobile: "primary" },
-  {
-    label: "Agenda",
-    icon: "calendar",
-    href: "#linha-do-tempo",
-    mobile: "primary",
-  },
-  {
-    label: "Tarefas",
-    icon: "tasks",
-    href: "#prioridades",
-    mobile: "primary",
-  },
-  {
-    label: "Finanças",
-    icon: "finance",
-    href: "#financas",
-    mobile: "primary",
-  },
-  {
-    label: "Bem-estar",
-    icon: "wellbeing",
-    href: "#bem-estar",
-    mobile: "primary",
-  },
-  { label: "Metas", icon: "goals", href: "#rituais", mobile: "secondary" },
-  {
-    label: "Notas",
-    icon: "notes",
-    href: "#quick-capture",
-    mobile: "secondary",
-  },
-  {
-    label: "Assistente",
-    icon: "assistant",
-    href: "#quick-capture",
-    mobile: "secondary",
-  },
-] satisfies Array<{
-  label: string;
-  icon: GardenIconName;
-  href: string;
-  mobile: "primary" | "secondary";
-}>;
-
-const secondaryNavigation = navigation.filter(
-  (item) => item.mobile === "secondary",
-);
 
 const moods = [
   { value: "terrible", label: "Muito mal", mouth: "M10 17c2.2-2 5.8-2 8 0" },
@@ -78,29 +25,6 @@ const timelineLabels = {
   task: "Tarefa",
   bill: "Conta",
 } as const;
-
-function SignOutIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="23"
-      viewBox="0 0 24 24"
-      width="23"
-    >
-      <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M9 12h9" />
-    </svg>
-  );
-}
-
-function SignOutButton() {
-  return (
-    <button className={styles.signOutButton} type="submit">
-      <SignOutIcon />
-      <span>Sair</span>
-    </button>
-  );
-}
 
 function MoodGlyph({ mouth }: { mouth: string }) {
   return (
@@ -127,62 +51,7 @@ export function TodayDashboard({ snapshot }: { snapshot: TodaySnapshot }) {
       <a className={styles.skipLink} href="#conteudo-principal">
         Pular para o conteúdo
       </a>
-      <aside className={styles.sidebar}>
-        <a
-          aria-label="Ir para o início"
-          className={styles.brand}
-          href="#inicio"
-        >
-          <span aria-hidden="true" className={styles.brandMark}>
-            <GardenIcon name="wellbeing" size={26} />
-          </span>
-          <span>Meu espaço</span>
-        </a>
-
-        <nav aria-label="Principal" className={styles.nav}>
-          {navigation.map((item, index) => (
-            <a
-              aria-current={index === 0 ? "page" : undefined}
-              className={index === 0 ? styles.navActive : styles.navItem}
-              data-mobile-secondary={
-                item.mobile === "secondary" ? "true" : undefined
-              }
-              href={item.href}
-              key={item.label}
-            >
-              <GardenIcon name={item.icon} size={23} />
-              <span>{item.label}</span>
-            </a>
-          ))}
-          <details className={styles.moreNav}>
-            <summary className={styles.moreSummary}>
-              <GardenIcon name="goals" size={23} />
-              <span>Mais</span>
-            </summary>
-            <div className={styles.moreMenu}>
-              {secondaryNavigation.map((item) => (
-                <a href={item.href} key={item.label}>
-                  <GardenIcon name={item.icon} size={23} />
-                  <span>{item.label}</span>
-                </a>
-              ))}
-              <form action={signOut}>
-                <SignOutButton />
-              </form>
-            </div>
-          </details>
-          <form action={signOut} className={styles.desktopSignOut}>
-            <SignOutButton />
-          </form>
-        </nav>
-
-        <p className={styles.sidebarNote}>
-          <GardenIcon name="assistant" size={19} />
-          <span>
-            Seu assistente organiza o que você escrever na captura rápida.
-          </span>
-        </p>
-      </aside>
+      <AppSidebar active="today" />
 
       <main className={styles.main} id="conteudo-principal">
         <QuickCapture
