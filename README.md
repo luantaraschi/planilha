@@ -1,69 +1,61 @@
-# Organiza
+# Organiza (planilha)
 
-Planner pessoal em Next.js com autenticação e dados locais no Supabase.
+Planner pessoal com módulos integrados de agenda, finanças, metas, bem-estar, notas e tarefas.
 
-## Desenvolvimento local
+## Como funciona
 
-Pré-requisitos: Node.js 22+ e Docker Desktop em execução.
+O Organiza centraliza a rotina pessoal em módulos especializados dentro de `src/app/` (`agenda`, `bem-estar`, `financas`, `metas`, `notas` e `tarefas`).
 
-```powershell
+A aplicação utiliza Next.js com App Router e Supabase como camada de banco de dados e autenticação. O projeto se destaca por uma suíte rigorosa de verificações cobrindo quatro camadas: testes unitários de componentes, testes de políticas de segurança do banco (`db:test`), validação estática de tipos (`typecheck`) e testes e2e no navegador (`test:browser`) que criam e limpam identidades efêmeras para validação real de fluxos.
+
+Para detalhes de arquitetura e especificações de produto, consulte os arquivos `DESIGN.md` e `PRODUCT.md`.
+
+## Rodar local
+
+Pré-requisitos: Node.js 22+ e Docker Desktop ativo.
+
+1. Instalar dependências e iniciar o Supabase local:
+
+```bash
 npm install
 npm run supabase:start
 ```
 
-Crie `.env.local` a partir de `.env.example` e substitua a chave de exemplo
-pela `PUBLISHABLE_KEY` exibida por `npm exec -- supabase status`. O arquivo
-local precisa conter:
+2. Configurar `.env.local` a partir do modelo `.env.example`:
 
-```powershell
-Copy-Item .env.example .env.local
+```bash
+cp .env.example .env.local
 ```
 
-```dotenv
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<PUBLISHABLE_KEY local>
-```
+3. Aplicar as migrações do banco e iniciar o servidor de desenvolvimento:
 
-Prepare o banco e inicie o app:
-
-```powershell
+```bash
 npm run db:reset
 npm run dev
 ```
 
-Abra [http://127.0.0.1:3000](http://127.0.0.1:3000). Para encerrar os serviços
-locais do Supabase:
+Abra [http://127.0.0.1:3000](http://127.0.0.1:3000). Para encerrar os serviços do Supabase:
 
-```powershell
+```bash
 npm run supabase:stop
 ```
 
 ## Verificações
 
-```powershell
-npm run db:test
-npm test
-npm run test:browser
+A suíte completa de verificações pode ser executada localmente:
+
+```bash
 npm run typecheck
 npm run lint
-npm audit
+npm run db:test
+npm test
 npm run build
 ```
 
-`npm run test:browser` é suportado no Windows com Node.js 22+, Docker Desktop,
-Supabase local, app local ativo e Google Chrome. O gate usa os atalhos e
-códigos de tecla do Windows, cria uma identidade local efêmera pela própria
-UI sem registrar as credenciais e a remove ao final, confirmando a ausência em
-`auth.users`, `profiles`, `preferences` e `audit_events`. A chave administrativa
-local é usada somente para inspeção e cleanup. Use `APP_URL`/`CHROME_PATH` se
-a URL local ou o executável do Chrome não estiverem nos padrões. URLs que não
-apontam para loopback são rejeitadas antes da criação da identidade.
+## Estado
 
-Para continuar somente a verificação completa de foco do Today com uma conta
-local já existente, sem criar, alterar ou excluir identidade, defina
-`BROWSER_GATE_MODE=continue-today`, `BROWSER_GATE_EMAIL` e
-`BROWSER_GATE_PASSWORD` no ambiente antes de executar `npm run test:browser`.
-O gate não registra os valores dessas credenciais.
+A aplicação é executada e validada localmente com a instância do Supabase via Docker. O projeto não possui configuração de hospedagem ou demonstração remota ativa.
 
-O projeto ainda não possui configuração de Supabase hospedado ou deploy
-remoto.
+## Licença
+
+MIT
